@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster Hochzeit</title>
+    <style>
+        /* Zentriert den gesamten Inhalt auf der Seite */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0ece1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Container, um Text und Bild untereinander zu stapeln */
+        .wedding-container {
+            text-align: center;
+        }
+
+        /* Styling für die Überschrift */
+        h1 {
+            font-size: 3rem;
+            color: #5a4a42;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+            text-transform: uppercase; /* Erzwingt Großbuchstaben */
+        }
+        
+        /* Styling für das Bild */
+        img {
+            max-width: 90%;
+            max-height: 70vh;
+            cursor: pointer;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
+        }
+
+        img:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wedding-container">
+        <h1>Hämster Wedding</h1>
+        
+        <img id="weddingImage" src="hochzeit.jpeg" alt="Hamster Hochzeit">
+    </div>
+
+    <audio id="weddingAudio" src="musik.mp3"></audio>
+
+    <script>
+        const image = document.getElementById('weddingImage');
+        const audio = document.getElementById('weddingAudio');
+
+        image.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+            }
+        });
+    </script>
+
+</body>
+</html>

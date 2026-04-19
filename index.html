@@ -3,71 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hamster Hochzeit</title>
+    <title>Unsere Hochzeit - RSVP</title>
     <style>
-        /* Zentriert den gesamten Inhalt auf der Seite */
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0ece1;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        /* Container, um Text und Bild untereinander zu stapeln */
-        .wedding-container {
-            text-align: center;
-        }
-
-        /* Styling für die Überschrift */
-        h1 {
-            font-size: 3rem;
-            color: #5a4a42;
-            margin-bottom: 20px;
-            letter-spacing: 5px;
-            text-transform: uppercase; /* Erzwingt Großbuchstaben */
-        }
-        
-        /* Styling für das Bild */
-        img {
-            max-width: 90%;
-            max-height: 70vh;
-            cursor: pointer;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            transition: transform 0.2s;
-        }
-
-        img:active {
-            transform: scale(0.98);
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 50px; background-color: #f9f6f0; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input, select, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #d4af37; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background-color: #b5952f; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="wedding-container">
-        <h1>Hämster Wedding</h1>
+<div class="container" id="login-section">
+    <h2>Willkommen!</h2>
+    <p>Bitte gib deinen 4-stelligen Code von der Einladung ein:</p>
+    <input type="text" id="guest-code" maxlength="4" placeholder="z.B. 1234">
+    <button id="login-btn">Einloggen</button>
+    <p id="login-error" style="color: red; display: none;">Code ungültig. Bitte versuche es erneut.</p>
+</div>
+
+<div class="container hidden" id="rsvp-section">
+    <h2>Schön, dass du da bist!</h2>
+    <form id="rsvp-form">
+        <label>Bist du dabei?</label>
+        <select id="status" required>
+            <option value="" disabled selected>Bitte wählen...</option>
+            <option value="attending">Ja, ich komme gerne!</option>
+            <option value="declined">Nein, ich kann leider nicht.</option>
+        </select>
+
+        <label>Dein Vor- und Nachname:</label>
+        <input type="text" id="guest-name" required placeholder="Max Mustermann">
+
+        <label>Namen deiner Begleitung(en) (falls vorhanden):</label>
+        <input type="text" id="plus-ones" placeholder="Lisa Mustermann, ...">
+
+        <label>Allergien oder Ernährungsbesonderheiten (Vegan, etc.):</label>
+        <textarea id="allergies" rows="3" placeholder="z.B. Erdnussallergie, Vegetarier..."></textarea>
+
+        <button type="submit">Antwort senden</button>
+    </form>
+</div>
+
+<div class="container hidden" id="success-section">
+    <h2>Vielen Dank!</h2>
+    <p>Wir haben deine Antwort gespeichert.</p>
+</div>
+
+<script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+    //import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+        apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
+        authDomain: "hochz-6b842.firebaseapp.com",
+        projectId: "hochz-6b842",
+        storageBucket: "hochz-6b842.firebasestorage.app",
+        messagingSenderId: "20011730032",
+        appId: "1:20011730032:web:bf5eca12bdac484ceb20b5",
+        measurementId: "G-YV13TJYV90"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    // const analytics = getAnalytics(app);
+
+    let currentCode = "";
+
+    // Login Logik
+    document.getElementById('login-btn').addEventListener('click', async () => {
+        const code = document.getElementById('guest-code').value;
+        if(code.length !== 4) return;
+
+        const docRef = doc(db, "invitations", code);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            currentCode = code;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('rsvp-section').classList.remove('hidden');
+            
+            // Falls schon Daten existieren, Formular vorausfüllen
+            const data = docSnap.data();
+            if(data.status !== "pending") document.getElementById('status').value = data.status;
+            if(data.name) document.getElementById('guest-name').value = data.name;
+            if(data.plusOnes) document.getElementById('plus-ones').value = data.plusOnes;
+            if(data.allergies) document.getElementById('allergies').value = data.allergies;
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+        }
+    });
+
+    // Formular Absenden Logik
+    document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        <img id="weddingImage" src="hochzeit.jpeg" alt="Hamster Hochzeit">
-    </div>
-
-    <audio id="weddingAudio" src="musik.mp3"></audio>
-
-    <script>
-        const image = document.getElementById('weddingImage');
-        const audio = document.getElementById('weddingAudio');
-
-        image.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play();
-            } else {
-                audio.pause();
-                audio.currentTime = 0;
-            }
+        const docRef = doc(db, "invitations", currentCode);
+        await updateDoc(docRef, {
+            status: document.getElementById('status').value,
+            name: document.getElementById('guest-name').value,
+            plusOnes: document.getElementById('plus-ones').value,
+            allergies: document.getElementById('allergies').value,
+            lastUpdated: new Date()
         });
-    </script>
 
+        document.getElementById('rsvp-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+    });
+</script>
 </body>
 </html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Hochzeitsgäste</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9;}
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #333; color: white; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin-right: 10px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px;}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Neuen Gast-Code anlegen</h2>
+    <input type="text" id="new-code" maxlength="4" placeholder="Neuer 4-stelliger Code">
+    <button id="add-code-btn">Code in Datenbank speichern</button>
+</div>
+
+<div class="card">
+    <h2>Live Gästeliste</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Status</th>
+                <th>Name</th>
+                <th>Begleitung(en)</th>
+                <th>Allergien</th>
+            </tr>
+        </thead>
+        <tbody id="guest-list">
+            </tbody>
+    </table>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+    // HIER DEINE FIREBASE CONFIG EINTRAGEN
+    const firebaseConfig = {
+        apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
+        authDomain: "hochz-6b842.firebaseapp.com",
+        projectId: "hochz-6b842",
+        storageBucket: "hochz-6b842.firebasestorage.app",
+        messagingSenderId: "20011730032",
+        appId: "1:20011730032:web:bf5eca12bdac484ceb20b5",
+        measurementId: "G-YV13TJYV90"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Neuen Code anlegen
+    document.getElementById('add-code-btn').addEventListener('click', async () => {
+        const code = document.getElementById('new-code').value;
+        if(code.length !== 4) return alert("Code muss 4 Zeichen lang sein!");
+
+        await setDoc(doc(db, "invitations", code), {
+            status: "pending",
+            name: "",
+            plusOnes: "",
+            allergies: ""
+        });
+        document.getElementById('new-code').value = "";
+    });
+
+    // Live-Update der Tabelle
+    const q = collection(db, "invitations");
+    onSnapshot(q, (snapshot) => {
+        const tbody = document.getElementById('guest-list');
+        tbody.innerHTML = ""; // Tabelle leeren
+        
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const tr = document.createElement('tr');
+            
+            // Farbcodierung für Status
+            let statusText = "Ausstehend ⏳";
+            if(data.status === "attending") statusText = "Zusage ✅";
+            if(data.status === "declined") statusText = "Absage ❌";
+
+            tr.innerHTML = `
+                <td><b>${doc.id}</b></td>
+                <td>${statusText}</td>
+                <td>${data.name || "-"}</td>
+                <td>${data.plusOnes || "-"}</td>
+                <td>${data.allergies || "-"}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    });
+</script>
+</body>
+</html>

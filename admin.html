@@ -32,6 +32,7 @@
                 <th>Name</th>
                 <th>Begleitung(en)</th>
                 <th>Allergien</th>
+                <th>Aktionen</th>
             </tr>
         </thead>
         <tbody id="guest-list">
@@ -41,7 +42,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
     // HIER DEINE FIREBASE CONFIG EINTRAGEN
     const firebaseConfig = {
@@ -71,31 +72,75 @@
         document.getElementById('new-code').value = "";
     });
 
+
+    //neu
+    window.deleteGuest = async (code) => {
+    if (confirm(`Möchtest du den Gast mit dem Code ${code} wirklich löschen?`)) {
+        await deleteDoc(doc(db, "invitations", code));
+    }
+    };
+
+    window.changeCode = async (oldCode) => {
+    const newCode = prompt(`Gib den neuen 4-stelligen Code für Gast ${oldCode} ein:`);
+    
+    // Validierung
+    if (!newCode || newCode.length !== 4) {
+        alert("Der Code muss genau 4 Zeichen lang sein.");
+        return;
+    }
+    if (newCode === oldCode) return;
+
+    // 1. Prüfen, ob der neue Code bereits existiert (Duplikatsprüfung)
+    const newDocRef = doc(db, "invitations", newCode);
+    const newDocSnap = await getDoc(newDocRef);
+
+    if (newDocSnap.exists()) {
+        alert(`Fehler: Der Code ${newCode} ist bereits an einen anderen Gast vergeben!`);
+        return;
+    }
+
+    // 2. Daten vom alten Dokument holen
+    const oldDocRef = doc(db, "invitations", oldCode);
+    const oldDocSnap = await getDoc(oldDocRef);
+    const data = oldDocSnap.data();
+
+    // 3. Neues Dokument mit altem Inhalt erstellen & altes löschen
+    try {
+        await setDoc(newDocRef, data);
+        await deleteDoc(oldDocRef);
+        alert(`Code erfolgreich von ${oldCode} auf ${newCode} geändert.`);
+    } catch (error) {
+        console.error("Fehler beim Verschieben:", error);
+        alert("Ein Fehler ist aufgetreten.");
+    }
+    };
+
     // Live-Update der Tabelle
     const q = collection(db, "invitations");
     onSnapshot(q, (snapshot) => {
-        const tbody = document.getElementById('guest-list');
-        tbody.innerHTML = ""; // Tabelle leeren
+    const tbody = document.getElementById('guest-list');
+    tbody.innerHTML = ""; 
+    
+    snapshot.forEach((doc) => {
+        const data = doc.data();
+        const tr = document.createElement('tr');
         
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            const tr = document.createElement('tr');
-            
-            // Farbcodierung für Status
-            let statusText = "Ausstehend ⏳";
-            if(data.status === "attending") statusText = "Zusage ✅";
-            if(data.status === "declined") statusText = "Absage ❌";
+        let statusText = data.status === "attending" ? "Zusage ✅" : (data.status === "declined" ? "Absage ❌" : "Ausstehend ⏳");
 
-            tr.innerHTML = `
-                <td><b>${doc.id}</b></td>
-                <td>${statusText}</td>
-                <td>${data.name || "-"}</td>
-                <td>${data.plusOnes || "-"}</td>
-                <td>${data.allergies || "-"}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        tr.innerHTML = `
+            <td><b>${doc.id}</b></td>
+            <td>${statusText}</td>
+            <td>${data.name || "-"}</td>
+            <td>${data.plusOnes || "-"}</td>
+            <td>${data.allergies || "-"}</td>
+            <td>
+                <button onclick="changeCode('${doc.id}')" style="background-color: #ffc107; color: black; padding: 5px;">Code ändern</button>
+                <button onclick="deleteGuest('${doc.id}')" style="background-color: #dc3545; color: white; padding: 5px;">Löschen</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
+});
 </script>
 </body>
 </html>

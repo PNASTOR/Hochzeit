@@ -107,7 +107,7 @@
             object-fit: contain;
             display: block;
             clip-path: inset(0 100% 0 0);
-            animation: writeSignature 2s ease-in-out 0.5s forwards;
+            animation: writeSignature 2s ease-in-out 0.2s forwards;
         }
 
         @keyframes writeSignature {
@@ -129,7 +129,7 @@
             height: 55px;
             background-color: #000;
             transform: scaleY(0);
-            animation: growLine 1s ease-out 2.5s forwards;
+            animation: growLine 0.5s ease-out 1.8s forwards;
             z-index: 10;
         }
 
@@ -141,13 +141,13 @@
         .date-left {
             text-align: right;
             transform: translateX(120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 2.3s forwards;
         }
 
         .date-right {
             text-align: left;
             transform: translateX(-120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 2.3s forwards;
         }
 
         .date-left p, .date-right p { margin: 0; line-height: 1.2; }

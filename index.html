@@ -5,22 +5,194 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unsere Hochzeit - RSVP</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 50px; background-color: #f9f6f0; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, select, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { background-color: #d4af37; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
-        button:hover { background-color: #b5952f; }
-        .hidden { display: none; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f9f6f0; 
+            min-height: 100vh; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Zentriert alles horizontal */
+        }
+        
+        /* --- WRAPPER FÜR DIE STARTSEITE --- */
+        #landing-page-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Verteilt Box oben, Datum unten */
+            flex-grow: 1; /* Nimmt den ganzen Platz der Höhe ein */
+            width: 100%;
+            max-width: 500px;
+            margin-top: 30px;
+        }
+
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #rsvp-section, #success-section {
+            max-width: 500px;
+            margin-top: 50px;
+        }
+        
+        /* QR Code Styling */
+        .qr-image {
+            width: 100%;
+            max-width: 250px; 
+            height: auto;
+            margin: 0 auto 20px auto;
+            display: block;
+            border-radius: 10px;
+        }
+
+        /* 4-PIN Eingabe Styling */
+        .pin-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px; 
+            margin: 20px 0 30px 0;
+        }
+        .pin-input {
+            width: 50px;
+            height: 60px;
+            font-size: 28px;
+            text-align: center;
+            border: none;
+            border-bottom: 3px solid #b28b5e; 
+            background: transparent;
+            outline: none;
+            border-radius: 0;
+            padding: 0;
+        }
+        .pin-input:focus { border-bottom-color: #333; }
+
+        /* Formular Styling */
+        input:not(.pin-input), select, textarea { 
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; 
+        }
+        button { 
+            background-color: #333; 
+            color: white; border: none; padding: 15px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 18px; 
+        }
+        button:hover { background-color: #555; }
+        .hidden { display: none !important; }
+        .error-text { color: #dc3545; margin-top: 10px; }
+
+
+        /* --- NEU: SCHRIFTZUG ANIMATION --- */
+        .signature-wrapper {
+            margin: 40px auto 10px auto;
+            max-width: 300px; /* Größe des Schriftzugs */
+            width: 100%;
+        }
+        
+        .signature-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            /* Startet unsichtbar (von rechts komplett abgeschnitten) */
+            clip-path: inset(0 100% 0 0);
+            /* Animiert in 2.5 Sekunden, startet nach 0.8 Sekunden Verzögerung */
+            animation: writeSignature 2s ease-in-out 0.8s forwards;
+        }
+
+        @keyframes writeSignature {
+            /* Deckt das Bild stufenlos von links nach rechts auf */
+            to { clip-path: inset(0 0 0 0); }
+        }
+
+
+        /* --- DATUM ANIMATION STYLING --- */
+        .wedding-date-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto 40px auto;
+            color: #000;
+        }
+
+        .date-divider {
+            width: 2px;
+            height: 55px;
+            background-color: #000;
+            transform: scaleY(0);
+            animation: growLine 1s ease-out 2s forwards;
+            z-index: 10;
+        }
+
+        .date-mask {
+            overflow: hidden; 
+            padding: 0 15px;
+        }
+
+        .date-left {
+            text-align: right;
+            transform: translateX(120%); 
+            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+        }
+
+        .date-right {
+            text-align: left;
+            transform: translateX(-120%); 
+            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+        }
+
+        .date-left p, .date-right p { margin: 0; line-height: 1.2; }
+        .txt-bold { font-weight: 800; font-size: 24px; letter-spacing: 1px; }
+        .txt-light { font-weight: 300; font-size: 14px; letter-spacing: 4px; }
+
+        @keyframes growLine { to { transform: scaleY(1); } }
+        @keyframes slideOut { to { transform: translateX(0); } }
     </style>
 </head>
 <body>
 
-<div class="container" id="login-section">
-    <h2>Willkommen!</h2>
-    <p>Bitte gib deinen 4-stelligen Code von der Einladung ein:</p>
-    <input type="text" id="guest-code" maxlength="4" placeholder="z.B. 1234">
-    <button id="login-btn">Einloggen</button>
-    <p id="login-error" style="color: red; display: none;">Code ungültig. Bitte versuche es erneut.</p>
+<div id="landing-page-wrapper">
+    
+    <div class="container" id="login-section">
+        <img src="QRCode.png" alt="QR Code" class="qr-image">
+        
+        <h2>Willkommen!</h2>
+        <p>Bitte gib deinen 4-stelligen Code ein:</p>
+        
+        <div class="pin-container">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+        </div>
+
+        <button id="login-btn">RSVP Senden</button>
+        <p id="login-error" class="hidden error-text"></p>
+    </div>
+
+    <div class="signature-wrapper">
+        <img src="signature.png" alt="Raisa & Avid" class="signature-img">
+    </div>
+
+    <div class="wedding-date-wrapper">
+        <div class="date-mask">
+            <div class="date-left">
+                <p class="txt-bold">08</p>
+                <p class="txt-light">SATURDAY</p>
+            </div>
+        </div>
+        <div class="date-divider"></div>
+        <div class="date-mask">
+            <div class="date-right">
+                <p class="txt-light">AUGUST</p>
+                <p class="txt-bold">2026</p>
+            </div>
+        </div>
+    </div>
+    
 </div>
 
 <div class="container hidden" id="rsvp-section">
@@ -39,29 +211,23 @@
         <label>Namen deiner Begleitung(en) (falls vorhanden):</label>
         <input type="text" id="plus-ones" placeholder="Lisa Mustermann, ...">
 
-        <label>Allergien oder Ernährungsbesonderheiten (Vegan, etc.):</label>
-        <textarea id="allergies" rows="3" placeholder="z.B. Erdnussallergie, Vegetarier..."></textarea>
+        <label>Allergien oder Ernährungsbesonderheiten:</label>
+        <textarea id="allergies" rows="3" placeholder="z.B. Vegan, Erdnussallergie..."></textarea>
 
-        <button type="submit">Antwort senden</button>
+        <button type="submit">Antwort speichern</button>
     </form>
 </div>
 
 <div class="container hidden" id="success-section">
     <h2>Vielen Dank!</h2>
-    <p>Wir haben deine Antwort gespeichert.</p>
+    <p>Wir haben deine Antwort erfolgreich gespeichert.</p>
 </div>
 
 <script type="module">
-    // Import the functions you need from the SDKs you need
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    //import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-    // TODO: Add SDKs for Firebase products that you want to use
-    // https://firebase.google.com/docs/web/setup#available-libraries
-
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    // DEINE FIREBASE CONFIG
     const firebaseConfig = {
         apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
         authDomain: "hochz-6b842.firebaseapp.com",
@@ -72,38 +238,63 @@
         measurementId: "G-YV13TJYV90"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    // const analytics = getAnalytics(app);
 
     let currentCode = "";
 
-    // Login Logik
+    // --- LOGIK FÜR DIE 4 PIN FELDER ---
+    const pinInputs = document.querySelectorAll('.pin-input');
+    
+    pinInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < pinInputs.length - 1) {
+                pinInputs[index + 1].focus();
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                pinInputs[index - 1].focus();
+            }
+        });
+    });
+
+    // --- LOGIN LOGIK ---
     document.getElementById('login-btn').addEventListener('click', async () => {
-        const code = document.getElementById('guest-code').value;
-        if(code.length !== 4) return;
+        const codeArray = Array.from(pinInputs).map(input => input.value);
+        const code = codeArray.join('');
+
+        if(code.length !== 4) {
+            document.getElementById('login-error').innerText = "Bitte gib alle 4 Ziffern ein.";
+            document.getElementById('login-error').classList.remove('hidden');
+            return;
+        }
 
         const docRef = doc(db, "invitations", code);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             currentCode = code;
-            document.getElementById('login-section').classList.add('hidden');
+            
+            // HIER WIRD NUN ALLES (Box, Schriftzug, Datum) AUSGEBLENDET
+            document.getElementById('landing-page-wrapper').classList.add('hidden');
             document.getElementById('rsvp-section').classList.remove('hidden');
             
-            // Falls schon Daten existieren, Formular vorausfüllen
             const data = docSnap.data();
             if(data.status !== "pending") document.getElementById('status').value = data.status;
             if(data.name) document.getElementById('guest-name').value = data.name;
             if(data.plusOnes) document.getElementById('plus-ones').value = data.plusOnes;
             if(data.allergies) document.getElementById('allergies').value = data.allergies;
         } else {
-            document.getElementById('login-error').style.display = 'block';
+            document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
+            document.getElementById('login-error').classList.remove('hidden');
+            pinInputs.forEach(input => input.value = '');
+            pinInputs[0].focus();
         }
     });
 
-    // Formular Absenden Logik
+    // --- FORMULAR ABSENDEN LOGIK ---
     document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         

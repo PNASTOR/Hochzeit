@@ -8,60 +8,67 @@
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             text-align: center; 
-            padding: 20px; 
             background-color: #f9f6f0; 
-            min-height: 100vh; 
             margin: 0;
+            padding: 0;
+            min-height: 100svh; /* svh beachtet auch die Adressleiste bei mobilen Browsern */
             display: flex;
             flex-direction: column;
-            align-items: center; /* Zentriert alles horizontal */
+            align-items: center; 
         }
         
-        /* --- WRAPPER FÜR DIE STARTSEITE --- */
+        /* --- WRAPPER FÜR DIE STARTSEITE (Genau 1 Bildschirmhöhe) --- */
         #landing-page-wrapper {
             display: flex;
             flex-direction: column;
-            justify-content: space-between; /* Verteilt Box oben, Datum unten */
-            flex-grow: 1; /* Nimmt den ganzen Platz der Höhe ein */
+            justify-content: space-between; /* Verteilt alles gleichmäßig vertikal */
+            align-items: center;
             width: 100%;
             max-width: 500px;
-            margin-top: 30px;
+            height: 100svh; /* Nimmt exakt die sichtbare Bildschirmhöhe ein */
+            padding: 3vh 20px 4vh 20px; /* Dynamischer Abstand (vh) oben und unten */
+            box-sizing: border-box;
         }
 
         .container { 
             background: white; 
-            padding: 30px; 
+            padding: 3vh 20px; /* vh = schrumpft auf kleinen Handys etwas zusammen */
             border-radius: 10px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
             width: 100%;
             box-sizing: border-box;
         }
 
+        /* Der Formular-Bereich darf scrollen, falls er sehr lang wird */
         #rsvp-section, #success-section {
             max-width: 500px;
-            margin-top: 50px;
+            margin-top: 5vh;
+            margin-bottom: 5vh;
         }
         
-        /* QR Code Styling */
+        /* QR Code Styling - Skaliert jetzt mit der Bildschirmhöhe! */
         .qr-image {
-            width: 100%;
-            max-width: 250px; 
-            height: auto;
-            margin: 0 auto 20px auto;
+            width: auto;
+            max-width: 100%; 
+            max-height: 22vh; /* Das Bild nimmt maximal 22% der Bildschirmhöhe ein */
+            margin: 0 auto 2vh auto;
             display: block;
             border-radius: 10px;
         }
+
+        h2 { margin: 1vh 0; font-size: 1.6em; }
+        p { margin: 1vh 0; }
 
         /* 4-PIN Eingabe Styling */
         .pin-container {
             display: flex;
             justify-content: center;
             gap: 15px; 
-            margin: 20px 0 30px 0;
+            margin: 2vh 0 3vh 0;
         }
         .pin-input {
             width: 50px;
-            height: 60px;
+            height: 55px;
             font-size: 28px;
             text-align: center;
             border: none;
@@ -86,25 +93,24 @@
         .error-text { color: #dc3545; margin-top: 10px; }
 
 
-        /* --- NEU: SCHRIFTZUG ANIMATION --- */
+        /* --- SCHRIFTZUG ANIMATION --- */
         .signature-wrapper {
-            margin: 40px auto 10px auto;
-            max-width: 300px; /* Größe des Schriftzugs */
+            margin: auto; /* Zieht sich automatisch in die Mitte des freien Platzes */
+            max-width: 280px; 
             width: 100%;
         }
         
         .signature-img {
             width: 100%;
             height: auto;
+            max-height: 12vh; /* Wird auf kleinen Displays nicht zu riesig */
+            object-fit: contain;
             display: block;
-            /* Startet unsichtbar (von rechts komplett abgeschnitten) */
             clip-path: inset(0 100% 0 0);
-            /* Animiert in 2.5 Sekunden, startet nach 0.8 Sekunden Verzögerung */
-            animation: writeSignature 2s ease-in-out 0.8s forwards;
+            animation: writeSignature 2.5s ease-in-out 0.8s forwards;
         }
 
         @keyframes writeSignature {
-            /* Deckt das Bild stufenlos von links nach rechts auf */
             to { clip-path: inset(0 0 0 0); }
         }
 
@@ -114,7 +120,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 30px auto 40px auto;
+            margin: 0; /* Wird vom Wrapper (space-between) gesteuert */
             color: #000;
         }
 
@@ -123,7 +129,7 @@
             height: 55px;
             background-color: #000;
             transform: scaleY(0);
-            animation: growLine 1s ease-out 2s forwards;
+            animation: growLine 0.4s ease-out forwards;
             z-index: 10;
         }
 
@@ -134,19 +140,19 @@
 
         .date-left {
             text-align: right;
-            transform: translateX(120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+            transform: translateX(100%); 
+            animation: slideOut 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
         }
 
         .date-right {
             text-align: left;
-            transform: translateX(-120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 3s forwards;
+            transform: translateX(-100%); 
+            animation: slideOut 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
         }
 
         .date-left p, .date-right p { margin: 0; line-height: 1.2; }
-        .txt-bold { font-weight: 800; font-size: 24px; letter-spacing: 1px; }
-        .txt-light { font-weight: 300; font-size: 14px; letter-spacing: 4px; }
+        .txt-bold { font-weight: 800; font-size: 20px; letter-spacing: 1px; }
+        .txt-light { font-weight: 300; font-size: 12px; letter-spacing: 3px; }
 
         @keyframes growLine { to { transform: scaleY(1); } }
         @keyframes slideOut { to { transform: translateX(0); } }
@@ -277,7 +283,7 @@
         if (docSnap.exists()) {
             currentCode = code;
             
-            // HIER WIRD NUN ALLES (Box, Schriftzug, Datum) AUSGEBLENDET
+            // HIER WIRD NUN ALLES AUSGEBLENDET
             document.getElementById('landing-page-wrapper').classList.add('hidden');
             document.getElementById('rsvp-section').classList.remove('hidden');
             

@@ -51,30 +51,33 @@
 
 <div id="rsvp-section" class="hidden">
     
-    <section class="snap-card">
-        <h2>Zusage</h2>
-        <p>Wische nach oben für mehr Infos ↓</p>
+    <section class="snap-card" id="card-1">
+        <div class="card-content">
+            <h2 id="welcome-title">Willkommen!</h2>
+            <p id="welcome-text">
+                Willkommen <span id="display-name"></span> zu unserer Hochzeit am 08. August 2026 von 16 - 01 Uhr. 
+                Bitte nimm dir für diesen Tag frei und gib uns Bescheid bis zum 17. Mai.
+            </p>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="btn-accept" style="background-color: #28a745;">Zusagen</button>
+                <button id="btn-decline" style="background-color: #dc3545;">Absagen</button>
+            </div>
+        </div>
     </section>
 
-    <section class="snap-card">
+    <section class="snap-card" id="card-2">
         <h2>Gäste Infos</h2>
         <div class="card-content">
             <form id="rsvp-form">
-                <label>Bist du dabei?</label>
-                <select id="status" required>
-                    <option value="" disabled selected>Bitte wählen...</option>
-                    <option value="attending">Ja, ich komme gerne!</option>
-                    <option value="declined">Nein, ich kann leider nicht.</option>
-                </select>
-
                 <label>Dein Vor- und Nachname:</label>
                 <input type="text" id="guest-name" required placeholder="Max Mustermann">
 
-                <label>Begleitung(en):</label>
-                <input type="text" id="plus-ones" placeholder="Namen eingeben...">
+                <label>Namen deiner Begleitung(en):</label>
+                <p id="plus-one-hint" style="font-size: 0.8em; color: #666;"></p>
+                <input type="text" id="plus-ones" placeholder="Lisa, Tom...">
 
-                <label>Allergien / Ernährung:</label>
-                <textarea id="allergies" rows="3" placeholder="Vegan, Erdnuss..."></textarea>
+                <label>Allergien oder Ernährungsbesonderheiten:</label>
+                <textarea id="allergies" rows="3" placeholder="z.B. Vegan..."></textarea>
 
                 <button type="submit">Antwort speichern</button>
             </form>
@@ -131,6 +134,10 @@
 
     let currentCode = "";
 
+    function scrollToCard(cardId) {
+    document.getElementById(cardId).scrollIntoView({ behavior: 'smooth' });
+}
+
     // --- LOGIK FÜR DIE 4 PIN FELDER ---
     const pinInputs = document.querySelectorAll('.pin-input');
     
@@ -160,20 +167,30 @@
         }
 
         const docRef = doc(db, "invitations", code);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await getDoc(doc(db, "invitations", code));
 
-        if (docSnap.exists()) {
-            currentCode = code;
-            
-            // HIER WIRD NUN ALLES AUSGEBLENDET
-            document.getElementById('landing-page-wrapper').classList.add('hidden');
-            document.getElementById('rsvp-section').classList.remove('hidden');
-            
-            const data = docSnap.data();
-            if(data.status !== "pending") document.getElementById('status').value = data.status;
-            if(data.name) document.getElementById('guest-name').value = data.name;
-            if(data.plusOnes) document.getElementById('plus-ones').value = data.plusOnes;
-            if(data.allergies) document.getElementById('allergies').value = data.allergies;
+    if (docSnap.exists()) {
+        currentCode = code;
+        const data = docSnap.data();
+
+        // Landing Page ausblenden, Scroller einblenden
+        document.getElementById('landing-page-wrapper').classList.add('hidden');
+        document.getElementById('rsvp-section').classList.remove('hidden');
+
+        // Namen in Begrüßung einfügen
+        document.getElementById('display-name').innerText = data.name ? data.name : "";
+        
+        // Formular-Felder vorbefüllen
+        document.getElementById('guest-name').value = data.name || "";
+        document.getElementById('plus-ones').value = data.plusOnes || "";
+        document.getElementById('allergies').value = data.allergies || "";
+        
+        // Hinweis für Begleitpersonen
+        if(data.allowedPlusOnes > 0) {
+            document.getElementById('plus-one-hint').innerText = `(Max. ${data.allowedPlusOnes} Begleitpersonen erlaubt)`;
+        } else {
+            document.getElementById('plus-one-hint').innerText = "(Nur für dich persönlich)";
+        }
         } else {
             document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
             document.getElementById('login-error').classList.remove('hidden');
@@ -182,22 +199,39 @@
         }
     });
 
-    // --- FORMULAR ABSENDEN LOGIK ---
-    document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const docRef = doc(db, "invitations", currentCode);
-        await updateDoc(docRef, {
-            status: document.getElementById('status').value,
-            name: document.getElementById('guest-name').value,
-            plusOnes: document.getElementById('plus-ones').value,
-            allergies: document.getElementById('allergies').value,
-            lastUpdated: new Date()
-        });
+    // ---ZUSAGE BUTTONS---
+document.getElementById('btn-accept').addEventListener('click', async () => {
+    await updateDoc(doc(db, "invitations", currentCode), {
+        status: "attending"
+    });
+    // Scrolle zur nächsten Karte (Gäste Infos)
+    scrollToCard('card-2');
+});
 
+// Absage-Button
+document.getElementById('btn-decline').addEventListener('click', async () => {
+    if(confirm("Möchtest du wirklich absagen?")) {
+        await updateDoc(doc(db, "invitations", currentCode), {
+            status: "declined"
+        });
+        // Direkt zur "Vielen Dank" Seite
         document.getElementById('rsvp-section').classList.add('hidden');
         document.getElementById('success-section').classList.remove('hidden');
+    }
+});
+
+// --- FORMULAR ABSENDEN ---
+document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    await updateDoc(doc(db, "invitations", currentCode), {
+        name: document.getElementById('guest-name').value,
+        plusOnes: document.getElementById('plus-ones').value,
+        allergies: document.getElementById('allergies').value,
+        lastUpdated: new Date()
     });
+
+});
     </script>
 
 </body>

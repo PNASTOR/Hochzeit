@@ -18,8 +18,10 @@
 
 <div class="card">
     <h2>Neuen Gast-Code anlegen</h2>
-    <input type="text" id="new-code" maxlength="4" placeholder="Neuer 4-stelliger Code">
-    <button id="add-code-btn">Code in Datenbank speichern</button>
+    <input type="text" id="new-code" maxlength="4" placeholder="Code (z.B. 1234)">
+    <input type="text" id="new-name" placeholder="Name des Gastes">
+    <input type="number" id="new-max-plus" placeholder="Max. Begleitpersonen" min="0">
+    <button id="add-code-btn">Gast anlegen</button>
 </div>
 
 <div class="card">
@@ -30,7 +32,8 @@
                 <th>Code</th>
                 <th>Status</th>
                 <th>Name</th>
-                <th>Begleitung(en)</th>
+                <th>Anzahl Begleitpersonen</th>
+                <th>Begleitpersonen</th>
                 <th>Allergien</th>
                 <th>Aktionen</th>
             </tr>
@@ -44,7 +47,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-    // HIER DEINE FIREBASE CONFIG EINTRAGEN
+    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
         authDomain: "hochz-6b842.firebaseapp.com",
@@ -58,18 +61,26 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Neuen Code anlegen
-    document.getElementById('add-code-btn').addEventListener('click', async () => {
+    // Neuer Code 
+   document.getElementById('add-code-btn').addEventListener('click', async () => {
         const code = document.getElementById('new-code').value;
+        const name = document.getElementById('new-name').value;
+        const allowedPlusOnes = parseInt(document.getElementById('new-max-plus').value) || 0;
+
         if(code.length !== 4) return alert("Code muss 4 Zeichen lang sein!");
 
         await setDoc(doc(db, "invitations", code), {
             status: "pending",
-            name: "",
+            name: name,
+            allowedPlusOnes: allowedPlusOnes,
             plusOnes: "",
             allergies: ""
         });
+
+        // Felder leeren
         document.getElementById('new-code').value = "";
+        document.getElementById('new-name').value = "";
+        document.getElementById('new-max-plus').value = "";
     });
 
 
@@ -99,12 +110,12 @@
         return;
     }
 
-    // 2. Daten vom alten Dokument holen
+    // Daten vom alten Dokument holen
     const oldDocRef = doc(db, "invitations", oldCode);
     const oldDocSnap = await getDoc(oldDocRef);
     const data = oldDocSnap.data();
 
-    // 3. Neues Dokument mit altem Inhalt erstellen & altes löschen
+    // Neues Dokument mit altem Inhalt erstellen & altes löschen
     try {
         await setDoc(newDocRef, data);
         await deleteDoc(oldDocRef);
@@ -131,6 +142,7 @@
             <td><b>${doc.id}</b></td>
             <td>${statusText}</td>
             <td>${data.name || "-"}</td>
+            <td>${data.allowedPlusOnes || "-"}</td>
             <td>${data.plusOnes || "-"}</td>
             <td>${data.allergies || "-"}</td>
             <td>

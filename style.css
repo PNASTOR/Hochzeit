@@ -158,7 +158,7 @@ body {
     width: 100%;
     height: 100svh;
     overflow-y: scroll;
-    scroll-snap-type: y proximity; /* Das magische Einrasten */
+    scroll-snap-type: y mandatory; /* Das magische Einrasten */
     scroll-behavior: smooth;
     display: block; /* War vorher flex, muss für snapping block/flex-col sein */
 }

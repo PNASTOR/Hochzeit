@@ -4,159 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unsere Hochzeit - RSVP</title>
-    <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            text-align: center; 
-            background-color: #f9f6f0; 
-            margin: 0;
-            padding: 0;
-            min-height: 100svh; /* svh beachtet auch die Adressleiste bei mobilen Browsern */
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
-        }
-        
-        /* --- WRAPPER FÜR DIE STARTSEITE (Genau 1 Bildschirmhöhe) --- */
-        #landing-page-wrapper {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between; /* Verteilt alles gleichmäßig vertikal */
-            align-items: center;
-            width: 100%;
-            max-width: 500px;
-            height: 100svh; /* Nimmt exakt die sichtbare Bildschirmhöhe ein */
-            padding: 3vh 20px 4vh 20px; /* Dynamischer Abstand (vh) oben und unten */
-            box-sizing: border-box;
-        }
-
-        .container { 
-            background: white; 
-            padding: 3vh 20px; /* vh = schrumpft auf kleinen Handys etwas zusammen */
-            border-radius: 10px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        /* Der Formular-Bereich darf scrollen, falls er sehr lang wird */
-        #rsvp-section, #success-section {
-            max-width: 500px;
-            margin-top: 5vh;
-            margin-bottom: 5vh;
-        }
-        
-        /* QR Code Styling - Skaliert jetzt mit der Bildschirmhöhe! */
-        .qr-image {
-            width: auto;
-            max-width: 100%; 
-            max-height: 22vh; /* Das Bild nimmt maximal 22% der Bildschirmhöhe ein */
-            margin: 0 auto 2vh auto;
-            display: block;
-            border-radius: 10px;
-        }
-
-        h2 { margin: 1vh 0; font-size: 1.6em; }
-        p { margin: 1vh 0; }
-
-        /* 4-PIN Eingabe Styling */
-        .pin-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px; 
-            margin: 2vh 0 3vh 0;
-        }
-        .pin-input {
-            width: 50px;
-            height: 55px;
-            font-size: 28px;
-            text-align: center;
-            border: none;
-            border-bottom: 3px solid #b28b5e; 
-            background: transparent;
-            outline: none;
-            border-radius: 0;
-            padding: 0;
-        }
-        .pin-input:focus { border-bottom-color: #333; }
-
-        /* Formular Styling */
-        input:not(.pin-input), select, textarea { 
-            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; 
-        }
-        button { 
-            background-color: #333; 
-            color: white; border: none; padding: 15px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 18px; 
-        }
-        button:hover { background-color: #555; }
-        .hidden { display: none !important; }
-        .error-text { color: #dc3545; margin-top: 10px; }
-
-
-        /* --- SCHRIFTZUG ANIMATION --- */
-        .signature-wrapper {
-            margin: auto; /* Zieht sich automatisch in die Mitte des freien Platzes */
-            max-width: 280px; 
-            width: 100%;
-        }
-        
-        .signature-img {
-            width: 100%;
-            height: auto;
-            max-height: 12vh; /* Wird auf kleinen Displays nicht zu riesig */
-            object-fit: contain;
-            display: block;
-            clip-path: inset(0 100% 0 0);
-            animation: writeSignature 2s ease-in-out 0.2s forwards;
-        }
-
-        @keyframes writeSignature {
-            to { clip-path: inset(0 0 0 0); }
-        }
-
-
-        /* --- DATUM ANIMATION STYLING --- */
-        .wedding-date-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0; /* Wird vom Wrapper (space-between) gesteuert */
-            color: #000;
-        }
-
-        .date-divider {
-            width: 2px;
-            height: 55px;
-            background-color: #000;
-            transform: scaleY(0);
-            animation: growLine 0.5s ease-out 1.8s forwards;
-            z-index: 10;
-        }
-
-        .date-mask {
-            overflow: hidden; 
-            padding: 0 15px;
-        }
-
-        .date-left {
-            text-align: right;
-            transform: translateX(120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 2.3s forwards;
-        }
-
-        .date-right {
-            text-align: left;
-            transform: translateX(-120%); 
-            animation: slideOut 1s cubic-bezier(0.2, 0.8, 0.2, 1) 2.3s forwards;
-        }
-
-        .date-left p, .date-right p { margin: 0; line-height: 1.2; }
-        .txt-bold { font-weight: 800; font-size: 20px; letter-spacing: 1px; }
-        .txt-light { font-weight: 300; font-size: 12px; letter-spacing: 3px; }
-
-        @keyframes growLine { to { transform: scaleY(1); } }
-        @keyframes slideOut { to { transform: translateX(0); } }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -201,35 +49,69 @@
     
 </div>
 
-<div class="container hidden" id="rsvp-section">
-    <h2>Schön, dass du da bist!</h2>
-    <form id="rsvp-form">
-        <label>Bist du dabei?</label>
-        <select id="status" required>
-            <option value="" disabled selected>Bitte wählen...</option>
-            <option value="attending">Ja, ich komme gerne!</option>
-            <option value="declined">Nein, ich kann leider nicht.</option>
-        </select>
+<div id="rsvp-section" class="hidden">
+    
+    <section class="snap-card">
+        <h2>Zusage</h2>
+        <p>Wische nach oben für mehr Infos ↓</p>
+    </section>
 
-        <label>Dein Vor- und Nachname:</label>
-        <input type="text" id="guest-name" required placeholder="Max Mustermann">
+    <section class="snap-card">
+        <h2>Gäste Infos</h2>
+        <div class="card-content">
+            <form id="rsvp-form">
+                <label>Bist du dabei?</label>
+                <select id="status" required>
+                    <option value="" disabled selected>Bitte wählen...</option>
+                    <option value="attending">Ja, ich komme gerne!</option>
+                    <option value="declined">Nein, ich kann leider nicht.</option>
+                </select>
 
-        <label>Namen deiner Begleitung(en) (falls vorhanden):</label>
-        <input type="text" id="plus-ones" placeholder="Lisa Mustermann, ...">
+                <label>Dein Vor- und Nachname:</label>
+                <input type="text" id="guest-name" required placeholder="Max Mustermann">
 
-        <label>Allergien oder Ernährungsbesonderheiten:</label>
-        <textarea id="allergies" rows="3" placeholder="z.B. Vegan, Erdnussallergie..."></textarea>
+                <label>Begleitung(en):</label>
+                <input type="text" id="plus-ones" placeholder="Namen eingeben...">
 
-        <button type="submit">Antwort speichern</button>
-    </form>
+                <label>Allergien / Ernährung:</label>
+                <textarea id="allergies" rows="3" placeholder="Vegan, Erdnuss..."></textarea>
+
+                <button type="submit">Antwort speichern</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="snap-card">
+        <h2>Dresscode</h2>
+    </section>
+
+    <section class="snap-card">
+        <h2>Dinner</h2>
+    </section>
+
+    <section class="snap-card">
+        <h2>Location</h2>
+    </section>
+
+    <section class="snap-card">
+        <h2>It's Party Time</h2>
+    </section>
+
+    <section class="snap-card">
+        <h2>Fotodump</h2>
+    </section>
+
+    <section class="snap-card">
+        <h2>Werbung</h2>
+    </section>
+
 </div>
 
 <div class="container hidden" id="success-section">
     <h2>Vielen Dank!</h2>
     <p>Wir haben deine Antwort erfolgreich gespeichert.</p>
 </div>
-
-<script type="module">
+<script  type="module">    
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
@@ -316,6 +198,7 @@
         document.getElementById('rsvp-section').classList.add('hidden');
         document.getElementById('success-section').classList.remove('hidden');
     });
-</script>
+    </script>
+
 </body>
 </html>

@@ -176,7 +176,7 @@ body {
     position: relative;
 }
 
-/* Wechselnde Hintergründe für die Karten (optional für bessere Optik) */
+/*Button Styling */
 .snap-card:nth-child(even) { background-color: #fff; }
 .snap-card:nth-child(odd) { background-color: #fcfbf8; }
 
@@ -197,4 +197,115 @@ body {
     max-width: 450px;
 }
 
-/* ... (Restliches Formular- & Button-Styling bleibt gleich) ... */
+/* --- AKTION BUTTONS (ZUSAGEN / ABSAGEN) --- */
+.action-btn {
+    flex: 1; /* Macht beide Buttons gleich breit */
+    padding: 15px 10px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Weicher Übergang der Farben */
+}
+
+/* Weiß mit grünem Rand */
+.btn-outline-green {
+    background-color: white;
+    color: #28a745;
+    border: 2px solid #28a745;
+}
+
+/* Komplett Grün */
+.btn-solid-green {
+    background-color: #28a745;
+    color: white;
+    border: 2px solid #28a745;
+}
+
+/* Weiß mit rotem Rand */
+.btn-outline-red {
+    background-color: white;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+}
+
+/* Grau (Inaktiv, aber klickbar) */
+.btn-gray {
+    background-color: #f0f0f0;
+    color: #999;
+    border: 2px solid #ccc;
+}
+
+/* --- DYNAMISCHE GÄSTE-REIHEN --- */
+.guest-row {
+    display: flex;
+    gap: 5px; /* Abstand etwas verringert für mehr Platz */
+    align-items: center;
+    background: #fdfdfd;
+    padding: 8px 5px; /* Etwas kompakter */
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+/* Eingabefelder in der Reihe */
+.guest-row input {
+    flex: 1; /* Sagt den Feldern: Nehmt den gesamten verfügbaren Platz ein! */
+    min-width: 40px; /* Verhindert, dass sie winzig werden */
+    padding: 10px 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin: 0; 
+    font-size: 14px; /* Schrift auf Handys leicht optimiert */
+}
+
+/* Ausgegraute Felder nach dem Speichern */
+.guest-row input:disabled {
+    background-color: #f5f5f5;
+    color: #666;
+    border-color: transparent;
+}
+
+/* Icon Buttons - Jetzt fest und schmal! */
+.icon-btn {
+    flex: 0 0 34px; /* Feste Breite: Wächst nicht, schrumpft nicht */
+    height: 34px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0; /* Padding entfernt, Icon füllt den Button besser aus */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: #e9ecef;
+}
+
+.icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Der Plus Button für neue Gäste */
+#btn-add-guest {
+    width: 100%;
+    padding: 15px;
+    border: 2px dashed #b28b5e;
+    background: transparent;
+    color: #b28b5e;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#btn-add-guest:hover {
+    background: rgba(178, 139, 94, 0.1);
+}

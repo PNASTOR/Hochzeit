@@ -58,31 +58,28 @@
                 Willkommen <span id="display-name"></span> zu unserer Hochzeit am 08. August 2026 von 16 - 01 Uhr. 
                 Bitte nimm dir für diesen Tag frei und gib uns Bescheid bis zum 17. Mai.
             </p>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button id="btn-accept" style="background-color: #28a745;">Zusagen</button>
-                <button id="btn-decline" style="background-color: #dc3545;">Absagen</button>
+            <div style="display: flex; gap: 10px; margin-top: 20px; width: 100%;">
+                <button id="btn-accept" class="action-btn btn-outline-green">Zusagen</button>
+                <button id="btn-decline" class="action-btn btn-outline-red">Absagen</button>
             </div>
         </div>
     </section>
 
     <section class="snap-card" id="card-2">
-        <h2>Gäste Infos</h2>
-        <div class="card-content">
-            <form id="rsvp-form">
-                <label>Dein Vor- und Nachname:</label>
-                <input type="text" id="guest-name" required placeholder="Max Mustermann">
+    <h2>Gäste Infos</h2>
+    <div class="card-content">
+        <p id="guest-count-hint" style="font-size: 0.9em; color: #666; margin-bottom: 15px;"></p>
+        
+        <div id="guest-rows-container"></div>
+        
+        <button id="btn-add-guest" class="hidden">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Weiteren Gast hinzufügen
+        </button>
 
-                <label>Namen deiner Begleitung(en):</label>
-                <p id="plus-one-hint" style="font-size: 0.8em; color: #666;"></p>
-                <input type="text" id="plus-ones" placeholder="Lisa, Tom...">
-
-                <label>Allergien oder Ernährungsbesonderheiten:</label>
-                <textarea id="allergies" rows="3" placeholder="z.B. Vegan..."></textarea>
-
-                <button type="submit">Antwort speichern</button>
-            </form>
-        </div>
-    </section>
+        <p style="font-size: 0.8em; color: #999; margin-top: 20px;">Wische nach oben, wenn alle Gäste eingetragen sind ↓</p>
+    </div>
+</section>
 
     <section class="snap-card">
         <h2>Dresscode</h2>
@@ -127,14 +124,15 @@
         messagingSenderId: "20011730032",
         appId: "1:20011730032:web:bf5eca12bdac484ceb20b5",
         measurementId: "G-YV13TJYV90"
-    };
+    };  
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let currentCode = "";
+    let currentStatus = "pending"; //Gaststatus: pending, attending, declined
 
-    function scrollToCard(cardId) {
+    function scrollToCard(cardId) { // Zu Karte scrollen
     document.getElementById(cardId).scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -157,21 +155,24 @@
 
     // --- LOGIN LOGIK ---
     document.getElementById('login-btn').addEventListener('click', async () => {
-        const codeArray = Array.from(pinInputs).map(input => input.value);
-        const code = codeArray.join('');
+    const codeArray = Array.from(pinInputs).map(input => input.value);
+    const code = codeArray.join('');
 
-        if(code.length !== 4) {
-            document.getElementById('login-error').innerText = "Bitte gib alle 4 Ziffern ein.";
-            document.getElementById('login-error').classList.remove('hidden');
-            return;
-        }
+    if(code.length !== 4) {
+        document.getElementById('login-error').innerText = "Bitte gib alle 4 Ziffern ein.";
+        document.getElementById('login-error').classList.remove('hidden');
+        return;
+    }
 
-        const docRef = doc(db, "invitations", code);
-        const docSnap = await getDoc(doc(db, "invitations", code));
+    const docRef = doc(db, "invitations", code);
+    const docSnap = await getDoc(docRef); // Hier war in deinem Code ein kleiner doppelter Aufruf, das ist jetzt sauberer
 
     if (docSnap.exists()) {
         currentCode = code;
         const data = docSnap.data();
+        
+        currentStatus = data.status || "pending"; 
+        updateButtonUI(currentStatus); // Setzt die Buttons direkt richtig beim Login
 
         // Landing Page ausblenden, Scroller einblenden
         document.getElementById('landing-page-wrapper').classList.add('hidden');
@@ -180,45 +181,228 @@
         // Namen in Begrüßung einfügen
         document.getElementById('display-name').innerText = data.name ? data.name : "";
         
-        // Formular-Felder vorbefüllen
-        document.getElementById('guest-name').value = data.name || "";
-        document.getElementById('plus-ones').value = data.plusOnes || "";
-        document.getElementById('allergies').value = data.allergies || "";
         
-        // Hinweis für Begleitpersonen
-        if(data.allowedPlusOnes > 0) {
-            document.getElementById('plus-one-hint').innerText = `(Max. ${data.allowedPlusOnes} Begleitpersonen erlaubt)`;
+        // --- NEUE LOGIK FÜR KARTE 2 (Gäste-Reihen) ---
+        
+        // Berechne maximale Gästeanzahl
+        let allowedPlus = data.allowedPlusOnes || 0;
+        maxAllowedGuests = 1 + allowedPlus; // 1 Hauptgast + X Begleitungen
+
+        const hint = document.getElementById('guest-count-hint');
+        if (allowedPlus > 0) {
+            hint.innerText = `Du kannst dich und bis zu ${allowedPlus} weitere Person(en) eintragen.`;
         } else {
-            document.getElementById('plus-one-hint').innerText = "(Nur für dich persönlich)";
+            hint.innerText = `Diese Einladung gilt exklusiv für dich.`;
         }
+
+        // Gäste laden oder leere Zeile erstellen
+        const guestsArray = data.guests || [];
+        document.getElementById('guest-rows-container').innerHTML = ""; // Container vor dem Füllen sicherheitshalber leeren
+
+        if (guestsArray.length > 0) {
+            // Es gibt schon gespeicherte Gäste in der Datenbank
+            guestsArray.forEach(guest => {
+                createGuestRow(guest.firstName, guest.lastName, true);
+            });
         } else {
-            document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
-            document.getElementById('login-error').classList.remove('hidden');
-            pinInputs.forEach(input => input.value = '');
-            pinInputs[0].focus();
+            // Erster Login: Wir erstellen eine leere erste Zeile.
+            // Falls du im Admin-Bereich schon einen Namen (z.B. "Max Mustermann") hinterlegt hast,
+            // teilen wir den automatisch in Vor- und Nachname für die zwei Felder auf.
+            let fName = "", lName = "";
+            if (data.name) {
+                const parts = data.name.trim().split(" ");
+                fName = parts[0] || ""; // Erstes Wort ist Vorname
+                lName = parts.slice(1).join(" ") || ""; // Rest ist Nachname
+            }
+            createGuestRow(fName, lName, false);
+        }
+
+    } else {
+        document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
+        document.getElementById('login-error').classList.remove('hidden');
+        pinInputs.forEach(input => input.value = '');
+        pinInputs[0].focus();
+    }
+});
+
+    // --- SVG ICONS FÜR DIE BUTTONS ---
+const iconCheck = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+const iconTrash = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+const iconPencil = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+const iconSaveDisk = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`;
+// Globale Variablen für Gäste-Management
+let maxAllowedGuests = 1; 
+
+// Hauptfunktion: Synchronisiert alle "gespeicherten" Zeilen mit Firebase
+async function syncGuestsToFirebase() {
+    const container = document.getElementById('guest-rows-container');
+    const rows = container.querySelectorAll('.guest-row.saved');
+    
+    const guestsArray = Array.from(rows).map(row => {
+        return {
+            firstName: row.querySelector('.input-first').value.trim(),
+            lastName: row.querySelector('.input-last').value.trim()
+        };
+    });
+
+    await updateDoc(doc(db, "invitations", currentCode), {
+        guests: guestsArray,
+        lastUpdated: new Date()
+    });
+    
+    updateAddButtonVisibility();
+}
+
+// Prüft, ob der "Plus" Button angezeigt werden darf
+function updateAddButtonVisibility() {
+    const container = document.getElementById('guest-rows-container');
+    const currentRows = container.querySelectorAll('.guest-row').length;
+    const btnAdd = document.getElementById('btn-add-guest');
+    
+    if (currentRows < maxAllowedGuests) {
+        btnAdd.classList.remove('hidden');
+    } else {
+        btnAdd.classList.add('hidden');
+    }
+}
+
+// Funktion zum Erstellen einer neuen Gast-Zeile
+function createGuestRow(firstName = "", lastName = "", isSaved = false) {
+    const container = document.getElementById('guest-rows-container');
+    const row = document.createElement('div');
+    row.className = `guest-row ${isSaved ? 'saved' : ''}`;
+
+    // HTML Struktur der Zeile
+    row.innerHTML = `
+        <input type="text" class="input-first" placeholder="Vorname" value="${firstName}">
+        <input type="text" class="input-last" placeholder="Nachname" value="${lastName}">
+        <button class="icon-btn btn-action-1"></button>
+        <button class="icon-btn btn-action-2"></button>
+    `;
+
+    const inputFirst = row.querySelector('.input-first');
+    const inputLast = row.querySelector('.input-last');
+    const btn1 = row.querySelector('.btn-action-1'); // Check/Cross
+    const btn2 = row.querySelector('.btn-action-2'); // Pencil/Disk
+
+    // Status setzen
+   function setRowState(state) {
+        if (state === "unsaved") {
+            inputFirst.disabled = false;
+            inputLast.disabled = false;
+            btn1.innerHTML = iconCheck; // Speichern (Grüner Haken)
+            btn2.innerHTML = iconPencil;
+            btn2.disabled = true; // Stift inaktiv
+            row.classList.remove('saved');
+        } else if (state === "saved") {
+            inputFirst.disabled = true;
+            inputLast.disabled = true;
+            btn1.innerHTML = iconTrash; // Löschen (Roter Mülleimer)
+            btn2.innerHTML = iconPencil;
+            btn2.disabled = false; // Stift aktiv
+            row.classList.add('saved');
+        } else if (state === "editing") {
+            inputFirst.disabled = false;
+            inputLast.disabled = false;
+            btn1.innerHTML = iconTrash; // Löschen bleibt möglich
+            btn2.innerHTML = iconSaveDisk; // Kassette (Blau)
+            row.classList.remove('saved'); 
+        }
+    }
+
+    setRowState(isSaved ? "saved" : "unsaved");
+
+    // Event Listener: Action 1 (Checkmark / Cross)
+    btn1.addEventListener('click', async () => {
+        if (!row.classList.contains('saved') && btn2.innerHTML.includes('stroke="#6c757d"')) {
+            // Es ist das Checkmark (Speichern)
+            if (inputFirst.value.trim() === "") return alert("Vorname fehlt!");
+            setRowState("saved");
+            await syncGuestsToFirebase();
+        } else {
+            // Es ist das Cross (Löschen)
+            row.remove();
+            await syncGuestsToFirebase();
+            
+            // Falls man alle löscht, direkt wieder eine leere Zeile anbieten
+            if (container.children.length === 0) {
+                createGuestRow();
+            }
         }
     });
 
-    // ---ZUSAGE BUTTONS---
-document.getElementById('btn-accept').addEventListener('click', async () => {
-    await updateDoc(doc(db, "invitations", currentCode), {
-        status: "attending"
+    // Event Listener: Action 2 (Pencil / Disk)
+    btn2.addEventListener('click', async () => {
+        if (btn2.innerHTML.includes('stroke="#6c757d"')) {
+            // Es ist der Stift -> Modus auf "Editing"
+            setRowState("editing");
+            inputFirst.focus();
+        } else {
+            // Es ist die Diskette -> Modus auf "Saved"
+            if (inputFirst.value.trim() === "") return alert("Vorname fehlt!");
+            setRowState("saved");
+            await syncGuestsToFirebase();
+        }
     });
-    // Scrolle zur nächsten Karte (Gäste Infos)
-    scrollToCard('card-2');
+
+    container.appendChild(row);
+    updateAddButtonVisibility();
+}
+
+// Plus Button Event
+document.getElementById('btn-add-guest').addEventListener('click', () => {
+    createGuestRow();
+});
+
+// Zusage-Button
+document.getElementById('btn-accept').addEventListener('click', async () => {
+    // Wenn Status ausstehend ist -> Zusagen
+    if (currentStatus !== "attending") {
+        await updateDoc(doc(db, "invitations", currentCode), { status: "attending" });
+        currentStatus = "attending";
+        updateButtonUI(currentStatus); // Button wird grün
+        scrollToCard('card-2'); // Scrollt zu Karte 2
+    } 
+    // Wenn bereits zugesagt -> Rücknahme abfragen
+    else if (currentStatus === "attending") {
+        if (confirm("Möchtest du deine Zusage wirklich zurücknehmen?")) {
+            await updateDoc(doc(db, "invitations", currentCode), { status: "pending" });
+            currentStatus = "pending";
+            updateButtonUI(currentStatus); // Button wird wieder weiß/grün
+        }
+    }
 });
 
 // Absage-Button
 document.getElementById('btn-decline').addEventListener('click', async () => {
-    if(confirm("Möchtest du wirklich absagen?")) {
-        await updateDoc(doc(db, "invitations", currentCode), {
-            status: "declined"
-        });
+    // Egal welcher Status, vorher immer fragen
+    if(confirm("Bist du sicher, dass du absagen möchtest? Wir würden uns sehr freuen, wenn du dabei wärst!")) {
+        await updateDoc(doc(db, "invitations", currentCode), { status: "declined" });
+        currentStatus = "declined";
+        
         // Direkt zur "Vielen Dank" Seite
         document.getElementById('rsvp-section').classList.add('hidden');
         document.getElementById('success-section').classList.remove('hidden');
     }
 });
+
+//Update Buttons je nach Status
+function updateButtonUI(status) {
+    const btnAccept = document.getElementById('btn-accept');
+    const btnDecline = document.getElementById('btn-decline');
+
+    if (status === "attending") {
+        // Zustand: Zugesagt
+        btnAccept.className = "action-btn btn-solid-green";
+        btnAccept.innerText = "Zugesagt";
+        btnDecline.className = "action-btn btn-gray"; // Absagen Button wird grau
+    } else {
+        // Zustand: Ausstehend (oder abgelehnt)
+        btnAccept.className = "action-btn btn-outline-green";
+        btnAccept.innerText = "Zusagen";
+        btnDecline.className = "action-btn btn-outline-red";
+    }
+}
 
 // --- FORMULAR ABSENDEN ---
 document.getElementById('rsvp-form').addEventListener('submit', async (e) => {

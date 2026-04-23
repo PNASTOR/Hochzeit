@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standesamtliche Trauung - RSVP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="landing-page-wrapper">
+    <div class="container" id="login-section">
+        <img src="QRCode.png" alt="Standesamt Code" class="qr-image">
+        
+        <h2>Standesamt</h2>
+        <p>Bitte gib deinen speziellen 4-stelligen Standesamt-Code ein:</p>
+        
+        <div class="pin-container">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="pin-input" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+        </div>
+
+        <button id="login-btn" style="background-color: #b28b5e;">Login Standesamt</button>
+        <p id="login-error" class="hidden error-text"></p>
+    </div>
+</div>
+
+<div id="rsvp-section" class="hidden">
+    <section class="snap-card" id="card-1">
+        <div class="card-content">
+            <h2 id="welcome-title">Standesamt</h2>
+            <p id="welcome-text">
+                Willkommen <span id="display-name"></span> zur unserer standesamtlichen Trauung am 19.September 2026
+                Wir freuen uns riesig, diesen intimen Moment mit dir zu teilen!
+            </p>
+            <div style="display: flex; gap: 10px; margin-top: 20px; width: 100%;">
+                <button id="btn-accept" class="action-btn btn-outline-green">Zusagen</button>
+                <button id="btn-decline" class="action-btn btn-outline-red">Absagen</button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="container hidden" id="success-section" style="margin: auto; margin-top: 20vh;">
+    <h2>Vielen Dank!</h2>
+    <p>Wir haben deine Antwort gespeichert.</p>
+</div>
+
+<script type="module">import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+// NEU: query, where, getDocs hinzugefügt
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+// DEINE FIREBASE CONFIG HIER EINSETZEN!
+const firebaseConfig = {
+    apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
+    authDomain: "hochz-6b842.firebaseapp.com",
+    projectId: "hochz-6b842",
+    storageBucket: "hochz-6b842.firebasestorage.app",
+    messagingSenderId: "20011730032",
+    appId: "1:20011730032:web:bf5eca12bdac484ceb20b5",
+    measurementId: "G-YV13TJYV90"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentDocId = ""; // WICHTIG: Hier speichern wir die echte Dokumenten-ID des Gastes
+let currentStatus = "pending";
+
+// --- 4 PIN FELDER LOGIK (Exakt wie bei script.js) ---
+const pinInputs = document.querySelectorAll('.pin-input');
+pinInputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+        if (e.target.value.length === 1 && index < pinInputs.length - 1) pinInputs[index + 1].focus();
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && e.target.value === '' && index > 0) pinInputs[index - 1].focus();
+    });
+});
+
+function updateButtonUI(status) {
+    const btnAccept = document.getElementById('btn-accept');
+    const btnDecline = document.getElementById('btn-decline');
+
+    if (status === "attending") {
+        btnAccept.className = "action-btn btn-solid-green";
+        btnAccept.innerText = "Zugesagt";
+        btnDecline.className = "action-btn btn-gray"; 
+    } else {
+        btnAccept.className = "action-btn btn-outline-green";
+        btnAccept.innerText = "Zusagen";
+        btnDecline.className = "action-btn btn-outline-red";
+    }
+}
+
+// --- LOGIN LOGIK FÜR STANDESAMT ---
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const code = Array.from(pinInputs).map(input => input.value).join('');
+
+    if(code.length !== 4) {
+        document.getElementById('login-error').innerText = "Bitte gib alle 4 Ziffern ein.";
+        document.getElementById('login-error').classList.remove('hidden');
+        return;
+    }
+
+    // Wir durchsuchen die Datenbank nach dem Standesamt-Code!
+    const q = query(collection(db, "invitations"), where("standesamtCode", "==", code));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        // Gast gefunden! (Da Codes einzigartig sind, nehmen wir das erste Ergebnis [0])
+        const guestDoc = querySnapshot.docs[0];
+        currentDocId = guestDoc.id; // Das ist der ursprüngliche Hochzeits-Code (wichtig fürs Speichern)
+        const data = guestDoc.data();
+        
+        currentStatus = data.standesamtStatus || "pending"; 
+        updateButtonUI(currentStatus);
+
+        document.getElementById('landing-page-wrapper').classList.add('hidden');
+        document.getElementById('rsvp-section').classList.remove('hidden');
+
+        let fullName = data.name;
+        if(fullName === "Unbekannter Gast" || !fullName) fullName = "";
+        document.getElementById('display-name').innerText = fullName;
+
+    } else {
+        document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
+        document.getElementById('login-error').classList.remove('hidden');
+        pinInputs.forEach(input => input.value = '');
+        pinInputs[0].focus();
+    }
+});
+
+// --- BUTTONS LOGIK STANDESAMT ---
+document.getElementById('btn-accept').addEventListener('click', async () => {
+    if (currentStatus !== "attending") {
+        // WICHTIG: Wir updaten 'standesamtStatus', nicht den normalen 'status'!
+        await updateDoc(doc(db, "invitations", currentDocId), { standesamtStatus: "attending" });
+        currentStatus = "attending";
+        updateButtonUI(currentStatus);
+        
+        // Nach der Zusage direkt zur Danke-Seite, da alle Infos ja schon auf der anderen Seite abgefragt wurden
+        document.getElementById('rsvp-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+    } else if (currentStatus === "attending") {
+        if (confirm("Möchtest du deine Standesamt-Zusage zurücknehmen?")) {
+            await updateDoc(doc(db, "invitations", currentDocId), { standesamtStatus: "pending" });
+            currentStatus = "pending";
+            updateButtonUI(currentStatus); 
+        }
+    }
+});
+
+document.getElementById('btn-decline').addEventListener('click', async () => {
+    if(confirm("Bist du sicher, dass du zum Standesamt absagen möchtest?")) {
+        await updateDoc(doc(db, "invitations", currentDocId), { standesamtStatus: "declined" });
+        currentStatus = "declined";
+        document.getElementById('rsvp-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+    }
+});</script>
+
+</body>
+</html>

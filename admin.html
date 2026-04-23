@@ -17,25 +17,37 @@
 <body>
 
 <div class="card">
-    <h2>Neuen Gast-Code anlegen</h2>
-    <input type="text" id="new-code" maxlength="4" placeholder="Code (z.B. 1234)">
-    <input type="text" id="new-name" placeholder="Name des Gastes">
-    <input type="number" id="new-max-plus" placeholder="Max. Begleitpersonen" min="0">
-    <button id="add-code-btn">Gast anlegen</button>
+    <h2>Neuen Gast anlegen</h2>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <input type="text" id="new-first-name" placeholder="Vorname">
+        <input type="text" id="new-last-name" placeholder="Nachname">
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+        <input type="number" id="new-max-plus" placeholder="Max. Begleitpersonen" style="width: 180px;">
+        <input type="text" id="new-admin-note" placeholder="Interne Notiz (optional)" style="flex-grow: 1;">
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+        <label style="cursor: pointer; font-size: 0.9em; color: #333; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="new-standesamt-check"> + Extra Standesamt-Einladung
+        </label>
+        <span id="standesamt-code-preview" style="font-family: monospace; color: #666; display: none;">Standesamt Code: ----</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span id="generated-code-preview" style="font-family: monospace; color: #666;">Vorschau Code: ----</span>
+        <button id="add-code-btn">Gast in Datenbank speichern</button>
+    </div>
 </div>
 
 <div class="card">
     <h2>Live Gästeliste</h2>
-    <table>
+    <table id="admin-table" style="width: 100%; text-align: left;">
         <thead>
             <tr>
                 <th>Code</th>
-                <th>Status</th>
-                <th>Name</th>
-                <th>Anzahl Begleitpersonen</th>
-                <th>Begleitpersonen</th>
-                <th>Allergien</th>
-                <th>Aktionen</th>
+                <th>Hauptgast</th>
+                <th>Status (Hochzeit)</th>
+                <th>Standesamt</th> <th>Begleitungen</th>
+                <th>Notiz</th>        <th>Aktionen</th>
             </tr>
         </thead>
         <tbody id="guest-list">
@@ -45,8 +57,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-
+    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDoc, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
     // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyACj7yHly0z2lPBzhgyXNTXx2GetvDhIds",
@@ -61,27 +72,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Neuer Code 
-   document.getElementById('add-code-btn').addEventListener('click', async () => {
-        const code = document.getElementById('new-code').value;
-        const name = document.getElementById('new-name').value;
-        const allowedPlusOnes = parseInt(document.getElementById('new-max-plus').value) || 0;
-
-        if(code.length !== 4) return alert("Code muss 4 Zeichen lang sein!");
-
-        await setDoc(doc(db, "invitations", code), {
-            status: "pending",
-            name: name,
-            allowedPlusOnes: allowedPlusOnes,
-            plusOnes: "",
-            allergies: ""
-        });
-
-        // Felder leeren
-        document.getElementById('new-code').value = "";
-        document.getElementById('new-name').value = "";
-        document.getElementById('new-max-plus').value = "";
-    });
 
 
     //neu
@@ -124,34 +114,170 @@
         console.error("Fehler beim Verschieben:", error);
         alert("Ein Fehler ist aufgetreten.");
     }
+};
+
+  window.editNote = async (code) => {
+    const docRef = doc(db, "invitations", code);
+    const docSnap = await getDoc(docRef);
+    const oldNote = docSnap.data().adminNote || "";
+    
+    const newNote = prompt("Notiz bearbeiten:", oldNote);
+    if (newNote !== null) {
+        await updateDoc(docRef, { adminNote: newNote });
+    }
     };
 
     // Live-Update der Tabelle
     const q = collection(db, "invitations");
-    onSnapshot(q, (snapshot) => {
+    // --- TABELLEN UPDATE (onSnapshot) ---
+onSnapshot(collection(db, "invitations"), (snapshot) => {
     const tbody = document.getElementById('guest-list');
-    tbody.innerHTML = ""; 
-    
-    snapshot.forEach((doc) => {
-        const data = doc.data();
-        const tr = document.createElement('tr');
-        
-        let statusText = data.status === "attending" ? "Zusage ✅" : (data.status === "declined" ? "Absage ❌" : "Ausstehend ⏳");
+    tbody.innerHTML = "";
 
+    snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const guests = data.guests || [];
+        const hasGuests = guests.length > 0;
+        const note = data.adminNote || ""; 
+        
+        // Standesamt-Daten auslesen
+        const hasStandesamt = data.hasStandesamt || false;
+        const sCode = data.standesamtCode || "-";
+        let sStatus = data.standesamtStatus || "pending";
+        
+        // Status für Standesamt etwas schöner formatieren
+        if(sStatus === "attending") sStatus = "✅ Zugesagt";
+        else if(sStatus === "declined") sStatus = "❌ Abgesagt";
+        else sStatus = "⏳ Ausstehend";
+
+        // HTML für die Standesamt-Spalte zusammenbauen
+        let standesamtHtml = "-";
+        if (hasStandesamt) {
+            standesamtHtml = `<b>${sCode}</b><br><span style="font-size:0.8em; color:#666;">${sStatus}</span>`;
+        }
+
+        const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><b>${doc.id}</b></td>
-            <td>${statusText}</td>
-            <td>${data.name || "-"}</td>
-            <td>${data.allowedPlusOnes || "-"}</td>
-            <td>${data.plusOnes || "-"}</td>
-            <td>${data.allergies || "-"}</td>
+            <td><b>${docSnap.id}</b></td>
+            <td>${data.name}</td>
+            <td>${data.status === "attending" ? "✅" : (data.status === "declined" ? "❌" : "⏳")} ${data.status}</td>
+            
+            <td>${standesamtHtml}</td>
+            
             <td>
-                <button onclick="changeCode('${doc.id}')" style="background-color: #ffc107; color: black; padding: 5px;">Code ändern</button>
-                <button onclick="deleteGuest('${doc.id}')" style="background-color: #dc3545; color: white; padding: 5px;">Löschen</button>
+                ${hasGuests ? `
+                    <details>
+                        <summary>${guests.length} Begleitung(en)</summary>
+                        <ul style="text-align:left; font-size: 0.9em; padding-left: 15px; margin-top: 5px;">
+                            ${guests.map(g => `<li>${g.firstName} ${g.lastName}</li>`).join('')}
+                        </ul>
+                    </details>
+                ` : "Keine"}
+            </td>
+            <td style="max-width: 150px; font-size: 0.85em; color: #555; cursor: pointer;" onclick="window.editNote('${docSnap.id}')">
+                ${note ? note : "<i>Klicken zum Hinzufügen</i>"}
+            </td>
+            <td>
+                <button onclick="window.changeCode('${docSnap.id}')" class="btn-warning">Code</button>
+                <button onclick="window.deleteGuest('${docSnap.id}')" class="btn-danger">Löschen</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+});
+
+let currentSalt = Math.random().toString(36).substring(2, 8); 
+let currentStandesamtSalt = Math.random().toString(36).substring(2, 8); // NEU: Zweiter Salt für Standesamt
+
+function generateHashCode(fName, lName, salt) {
+    const str = (fName + lName).toLowerCase().trim() + salt;
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    }
+    const result = (Math.abs(hash) % 9998) + 1;
+    return result.toString().padStart(4, '0');
+}
+
+// Live-Vorschau aktualisieren (jetzt für beide Codes)
+const updatePreview = () => {
+    const fn = document.getElementById('new-first-name').value;
+    const ln = document.getElementById('new-last-name').value;
+    
+    document.getElementById('generated-code-preview').innerText = "Code Hochzeit: " + generateHashCode(fn, ln, currentSalt);
+    
+    // Standesamt Preview ein/ausblenden
+    if (document.getElementById('new-standesamt-check').checked) {
+        document.getElementById('standesamt-code-preview').style.display = "inline";
+        document.getElementById('standesamt-code-preview').innerText = "Standesamt: " + generateHashCode(fn, ln, currentStandesamtSalt);
+    } else {
+        document.getElementById('standesamt-code-preview').style.display = "none";
+    }
+};
+
+document.getElementById('new-first-name').addEventListener('input', updatePreview);
+document.getElementById('new-last-name').addEventListener('input', updatePreview);
+document.getElementById('new-standesamt-check').addEventListener('change', updatePreview); // NEU
+updatePreview(); 
+
+// --- GAST SPEICHERN ---
+document.getElementById('add-code-btn').addEventListener('click', async () => {
+    const fName = document.getElementById('new-first-name').value.trim();
+    const lName = document.getElementById('new-last-name').value.trim();
+    const note = document.getElementById('new-admin-note').value.trim();
+    const allowed = parseInt(document.getElementById('new-max-plus').value) || 0;
+    const hasStandesamt = document.getElementById('new-standesamt-check').checked; // NEU
+
+    let code = generateHashCode(fName, lName, currentSalt);
+
+    let docSnap = await getDoc(doc(db, "invitations", code));
+    while(docSnap.exists()) {
+        currentSalt = Math.random().toString(36).substring(2, 8);
+        code = generateHashCode(fName, lName, currentSalt);
+        docSnap = await getDoc(doc(db, "invitations", code));
+    }
+
+    // NEU: Standesamt Code generieren und prüfen
+    let sCode = "";
+    if (hasStandesamt) {
+        sCode = generateHashCode(fName, lName, currentStandesamtSalt);
+        let q = query(collection(db, "invitations"), where("standesamtCode", "==", sCode));
+        let querySnapshot = await getDocs(q);
+        
+        // Verhindern, dass der Standesamt-Code schon existiert ODER gleich dem Hochzeits-Code ist
+        while(!querySnapshot.empty || sCode === code) { 
+            currentStandesamtSalt = Math.random().toString(36).substring(2, 8);
+            sCode = generateHashCode(fName, lName, currentStandesamtSalt);
+            q = query(collection(db, "invitations"), where("standesamtCode", "==", sCode));
+            querySnapshot = await getDocs(q);
+        }
+    }
+
+    let fullName = (fName + " " + lName).trim();
+    if (fullName === "") fullName = "Unbekannter Gast";
+
+    await setDoc(doc(db, "invitations", code), {
+        name: fullName,
+        firstName: fName,
+        lastName: lName,
+        status: "pending",
+        allowedPlusOnes: allowed,
+        adminNote: note,
+        hasStandesamt: hasStandesamt,          // NEU
+        standesamtCode: sCode,                 // NEU
+        standesamtStatus: hasStandesamt ? "pending" : null, // NEU
+        guests: [] 
+    });
+
+    // Reset der Felder
+    document.getElementById('new-first-name').value = "";
+    document.getElementById('new-last-name').value = "";
+    document.getElementById('new-max-plus').value = "";
+    document.getElementById('new-admin-note').value = "";
+    document.getElementById('new-standesamt-check').checked = false;
+    currentSalt = Math.random().toString(36).substring(2, 8);
+    currentStandesamtSalt = Math.random().toString(36).substring(2, 8);
+    updatePreview();
 });
 </script>
 </body>

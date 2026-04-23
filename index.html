@@ -185,7 +185,7 @@
         // --- NEUE LOGIK FÜR KARTE 2 (Gäste-Reihen) ---
         
         // Berechne maximale Gästeanzahl
-        let allowedPlus = data.allowedPlusOnes || 0;
+       let allowedPlus = data.allowedPlusOnes || 0;
         maxAllowedGuests = 1 + allowedPlus; // 1 Hauptgast + X Begleitungen
 
         const hint = document.getElementById('guest-count-hint');
@@ -195,27 +195,34 @@
             hint.innerText = `Diese Einladung gilt exklusiv für dich.`;
         }
 
-        // Gäste laden oder leere Zeile erstellen
-        const guestsArray = data.guests || [];
-        document.getElementById('guest-rows-container').innerHTML = ""; // Container vor dem Füllen sicherheitshalber leeren
+        // --- GÄSTE REIHEN LADEN ---
+        document.getElementById('guest-rows-container').innerHTML = ""; // Container vor dem Füllen leeren
 
-        if (guestsArray.length > 0) {
-            // Es gibt schon gespeicherte Gäste in der Datenbank
-            guestsArray.forEach(guest => {
-                createGuestRow(guest.firstName, guest.lastName, true);
-            });
-        } else {
-            // Erster Login: Wir erstellen eine leere erste Zeile.
-            // Falls du im Admin-Bereich schon einen Namen (z.B. "Max Mustermann") hinterlegt hast,
-            // teilen wir den automatisch in Vor- und Nachname für die zwei Felder auf.
-            let fName = "", lName = "";
-            if (data.name) {
-                const parts = data.name.trim().split(" ");
-                fName = parts[0] || ""; // Erstes Wort ist Vorname
-                lName = parts.slice(1).join(" ") || ""; // Rest ist Nachname
-            }
-            createGuestRow(fName, lName, false);
+        // 1. HAUPTGAST (Immer die allererste Zeile)
+        let fName = data.firstName || "";
+        let lName = data.lastName || "";
+        
+        // Fallback: Falls 'firstName' leer ist, aber der Admin nur einen vollen 'name' eingetragen hat
+        if (!fName && !lName && data.name && data.name !== "Unbekannter Gast") {
+            const parts = data.name.trim().split(" ");
+            fName = parts[0] || ""; 
+            lName = parts.slice(1).join(" ") || ""; 
         }
+
+        // Wenn bereits ein Name vom Admin oder durch vorheriges Speichern da ist -> Modus "saved" (Mülleimer/Stift)
+        // Wenn es komplett leer ist -> Modus "unsaved" (Grüner Haken)
+        let isMainSaved = (fName !== "" || lName !== ""); 
+        createGuestRow(fName, lName, isMainSaved);
+
+        // 2. BEGLEITPERSONEN (Zeile 2, 3, ...)
+        const guestsArray = data.guests || [];
+        guestsArray.forEach(guest => {
+            // Begleiter, die bereits in der Datenbank stehen, laden wir direkt als "gespeichert"
+            createGuestRow(guest.firstName, guest.lastName, true); 
+        });
+        
+        // Aktualisieren, ob der Plus-Button noch angezeigt werden darf
+        updateAddButtonVisibility();
 
     } else {
         document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
@@ -238,15 +245,35 @@ async function syncGuestsToFirebase() {
     const container = document.getElementById('guest-rows-container');
     const rows = container.querySelectorAll('.guest-row.saved');
     
-    const guestsArray = Array.from(rows).map(row => {
-        return {
-            firstName: row.querySelector('.input-first').value.trim(),
-            lastName: row.querySelector('.input-last').value.trim()
-        };
+    let mainGuest = { firstName: "", lastName: "" };
+    let plusOnes = [];
+
+    // Wir gehen alle gespeicherten Zeilen durch
+    Array.from(rows).forEach((row, index) => {
+        const f = row.querySelector('.input-first').value.trim();
+        const l = row.querySelector('.input-last').value.trim();
+        
+        if (index === 0) {
+            // Die ALLERERSTE Zeile (Index 0) ist immer der Hauptgast
+            mainGuest = { firstName: f, lastName: l };
+        } else {
+            // Alle folgenden Zeilen sind Begleitungen
+            plusOnes.push({ firstName: f, lastName: l });
+        }
     });
 
+    // Voller Name des Hauptgastes für die Begrüßung updaten
+    let fullName = (mainGuest.firstName + " " + mainGuest.lastName).trim();
+    if(fullName === "") fullName = "Unbekannter Gast";
+    
+    // Live-Update des Begrüßungstextes auf Karte 1, falls der Gast seinen eigenen Namen ändert!
+    document.getElementById('display-name').innerText = fullName !== "Unbekannter Gast" ? fullName : "";
+
     await updateDoc(doc(db, "invitations", currentCode), {
-        guests: guestsArray,
+        name: fullName,
+        firstName: mainGuest.firstName,
+        lastName: mainGuest.lastName,
+        guests: plusOnes, // Nur die Begleitungen landen im Array
         lastUpdated: new Date()
     });
     

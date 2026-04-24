@@ -17,7 +17,7 @@ body {
     background-color: #f9f6f0; 
     
     /* 2. Die Blumen! WICHTIG: Prüfe, ob deine Dateien wirklich .png oder .jpg am Ende heißen! */
-    background-image: url('Blume1.png'), url('Blume3.png'), url('Blume2.png');
+    
     
     /* 3. Die Positionen (Oben links, unten rechts, unten links) */
     background-position: top left, bottom right, bottom left;

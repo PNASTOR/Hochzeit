@@ -55,7 +55,7 @@
         <div class="card-content">
             <h2 id="welcome-title">Willkommen!</h2>
             <p id="welcome-text">
-                Willkommen <span id="display-name"></span> zu unserer Hochzeit am 08. August 2026 von 16 - 01 Uhr. 
+                Willkommen <span id="display-name"></span> zu unserer Hochzeit am 08. August 2026. 
                 Bitte nimm dir für diesen Tag frei und gib uns Bescheid bis zum 17. Mai.
             </p>
             <div style="display: flex; gap: 10px; margin-top: 20px; width: 100%;">
@@ -117,11 +117,13 @@
     </div>
     
     <div class="location-info">
-        <h2>Festhalle Flonheim</h2>
+        <span style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 2px;">Unsere Location</span>
+        <h2 style="margin: 5px 0 10px 0;">Festhalle Flonheim</h2>
         <p>Langgasse 79, 55237 Flonheim</p>
+        
         <div class="maps-row">
-            <a href="https://www.google.com/maps/search/?api=1&query=Festhalle Flonheim" target="_blank" class="map-btn google">Google Maps</a>
-            <a href="https://maps.apple.com/?q=Festhalle Flonheim" target="_blank" class="map-btn apple">Apple Maps</a>
+            <a href="https://www.google.com/maps/search/?api=1&query=Langgasse+79,+55237+Flonheim" target="_blank" class="map-btn google">Google Maps</a>
+            <a href="https://maps.apple.com/?q=Langgasse+79,+55237+Flonheim" target="_blank" class="map-btn apple">Apple Maps</a>
         </div>
         <p style="font-size: 0.8em; color: #999; margin-top: 15px;">Wische nach oben für die Party-Infos ↓</p>
     </div>
@@ -140,8 +142,6 @@
         </div>
 
         <div id="selected-songs-list" style="margin-top: 20px; width: 100%;"></div>
-
-        <p style="font-size: 0.8em; color: #999; margin-top: 20px;">Wische nach oben für die nächsten Schritte ↓</p>
     </div>
 </section>
 
@@ -747,8 +747,9 @@ function renderSongs() {
     }
 }
 
-// --- NEUE AUDIO LOGIK (Play / Pause) ---
-let currentlyPlayingIndex = -1;
+/// --- NEUE AUDIO LOGIK (Play / Pause) ---
+let currentlyPlayingIndex = -1; // Merkt sich, welches Lied gerade läuft
+let previewTimeout; // Merkt sich den 10-Sekunden-Timer
 
 window.togglePlay = (index, url) => {
     const btn = document.getElementById(`play-btn-${index}`);
@@ -757,6 +758,7 @@ window.togglePlay = (index, url) => {
     if (currentlyPlayingIndex === index && !audioPlayer.paused) {
         audioPlayer.pause();
         btn.innerText = "▶"; // Zurück zu Play
+        clearTimeout(previewTimeout); // Timer stoppen
         currentlyPlayingIndex = -1;
         return;
     }
@@ -765,6 +767,7 @@ window.togglePlay = (index, url) => {
     if (currentlyPlayingIndex !== -1) {
         const oldBtn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);
         if (oldBtn) oldBtn.innerText = "▶"; // Altes Symbol zurücksetzen
+        clearTimeout(previewTimeout);
     }
 
     // Fall 3: Lied starten
@@ -772,11 +775,19 @@ window.togglePlay = (index, url) => {
     audioPlayer.play();
     btn.innerText = "⏸"; // Auf Pause-Symbol wechseln
     currentlyPlayingIndex = index;
-    
-    // (Der 10-Sekunden-Timer wurde hier komplett entfernt)
+
+    // Nach 10 Sekunden automatisch stoppen
+    previewTimeout = setTimeout(() => {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        if (document.getElementById(`play-btn-${index}`)) {
+            document.getElementById(`play-btn-${index}`).innerText = "▶";
+        }
+        currentlyPlayingIndex = -1;
+    }, 20000);
 };
 
-// Wenn die 30 Sekunden von Apple abgelaufen sind, setzt sich der Button automatisch zurück
+// Sicherheits-Check: Falls das Lied auf natürliche Weise vor 10 Sek. endet
 audioPlayer.onended = () => {
     if (currentlyPlayingIndex !== -1) {
         const btn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);
@@ -798,6 +809,30 @@ let searchTimeout;
 document.getElementById('song-search-input').addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => searchSongs(e.target.value), 100);
+});
+
+// --- SCROLL ANIMATIONEN (Einblenden beim Wischen) ---
+const animationObserverOptions = {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.3 // Löst aus, sobald 30% der Karte im Sichtfeld sind
+};
+
+const cardAnimationObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            // Karte kommt ins Bild -> Animation abspielen
+            entry.target.classList.add('is-visible');
+        } else {
+            // Karte verlässt das Bild -> Verstecken, damit es beim erneuten Scrollen wieder animiert
+            entry.target.classList.remove('is-visible');
+        }
+    });
+}, animationObserverOptions);
+
+// Wir weisen den Observer an, alle Karten zu überwachen
+document.querySelectorAll('.snap-card').forEach(card => {
+    cardAnimationObserver.observe(card);
 });
     </script>
 

@@ -379,12 +379,16 @@ function createGuestRow(firstName = "", lastName = "", isSaved = false) {
             btn2.innerHTML = iconPencil;
             btn2.disabled = false; // Stift aktiv
             row.classList.add('saved');
+            syncGuestsToFirebase(); 
+            loadDinnerCard(); 
         } else if (state === "editing") {
             inputFirst.disabled = false;
             inputLast.disabled = false;
             btn1.innerHTML = iconTrash; // Löschen bleibt möglich
             btn2.innerHTML = iconSaveDisk; // Kassette (Blau)
             row.classList.remove('saved'); 
+            syncGuestsToFirebase();
+            loadDinnerCard();
         }
     }
 
@@ -492,30 +496,39 @@ document.getElementById('understood-btn').addEventListener('click', () => {
 
 function loadDinnerCard() {
     const container = document.getElementById('dinner-guests-container');
-    container.innerHTML = ""; // Vorher leeren
+    
+    // 1. Aktuelle Eingaben aus dem Dinner-Bereich kurz zwischenspeichern
+    const currentInputs = {};
+    const existingBlocks = container.querySelectorAll('.dinner-guest-block');
+    existingBlocks.forEach(block => {
+        const name = block.querySelector('.dinner-guest-name').innerText;
+        currentInputs[name] = {
+            allergies: block.querySelector('.dinner-allergies').value,
+            notes: block.querySelector('.dinner-notes').value
+        };
+    });
 
+    // 2. Container leeren
+    container.innerHTML = "";
+
+    // 3. Alle aktuell gespeicherten Gäste aus Karte 2 holen
     const guestRows = document.querySelectorAll('#guest-rows-container .guest-row.saved');
     
-    if (guestRows.length === 0) {
-        container.innerHTML = "<p style='color:#dc3545;'>Bitte trage zuerst deine Gäste unter 'Gäste Infos' (Karte 2) ein und speichere sie ab.</p>";
-        return;
-    }
-
     guestRows.forEach((row) => {
-        const firstName = row.querySelector('.input-first').value;
-        const lastName = row.querySelector('.input-last').value;
-        const fullName = `${firstName} ${lastName}`.trim();
+        const firstName = row.querySelector('.input-first').value.trim();
+        const lastName = row.querySelector('.input-last').value.trim();
+        const fullName = `${firstName} ${lastName}`.trim() || "Unbekannter Gast";
 
-        // NEU: Schauen, ob für diesen Namen schon Daten existieren
-        const existingData = currentDinnerPrefs.find(d => d.name === fullName) || { allergies: "", notes: "" };
+        // Schauen, ob wir für diesen Namen (oder diesen Index) schon Daten hatten
+        const savedData = currentInputs[fullName] || { allergies: "", notes: "" };
 
         const guestBlock = document.createElement('div');
         guestBlock.className = "dinner-guest-block";
         guestBlock.innerHTML = `
             <span class="dinner-guest-name">${fullName}</span>
             <div class="dinner-input-group">
-                <input type="text" class="dinner-allergies" placeholder="Allergien / Diät (z.B. Vegan)" value="${existingData.allergies}">
-                <input type="text" class="dinner-notes" placeholder="Anmerkung zum Essen" value="${existingData.notes}">
+                <input type="text" class="dinner-allergies" placeholder="Allergien / Diät" value="${savedData.allergies}">
+                <input type="text" class="dinner-notes" placeholder="Anmerkung" value="${savedData.notes}">
             </div>
         `;
         container.appendChild(guestBlock);

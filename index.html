@@ -747,9 +747,8 @@ function renderSongs() {
     }
 }
 
-/// --- NEUE AUDIO LOGIK (Play / Pause) ---
-let currentlyPlayingIndex = -1; // Merkt sich, welches Lied gerade läuft
-let previewTimeout; // Merkt sich den 10-Sekunden-Timer
+// --- NEUE AUDIO LOGIK (Play / Pause) ---
+let currentlyPlayingIndex = -1;
 
 window.togglePlay = (index, url) => {
     const btn = document.getElementById(`play-btn-${index}`);
@@ -758,7 +757,6 @@ window.togglePlay = (index, url) => {
     if (currentlyPlayingIndex === index && !audioPlayer.paused) {
         audioPlayer.pause();
         btn.innerText = "▶"; // Zurück zu Play
-        clearTimeout(previewTimeout); // Timer stoppen
         currentlyPlayingIndex = -1;
         return;
     }
@@ -767,7 +765,6 @@ window.togglePlay = (index, url) => {
     if (currentlyPlayingIndex !== -1) {
         const oldBtn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);
         if (oldBtn) oldBtn.innerText = "▶"; // Altes Symbol zurücksetzen
-        clearTimeout(previewTimeout);
     }
 
     // Fall 3: Lied starten
@@ -775,19 +772,11 @@ window.togglePlay = (index, url) => {
     audioPlayer.play();
     btn.innerText = "⏸"; // Auf Pause-Symbol wechseln
     currentlyPlayingIndex = index;
-
-    // Nach 10 Sekunden automatisch stoppen
-    previewTimeout = setTimeout(() => {
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0;
-        if (document.getElementById(`play-btn-${index}`)) {
-            document.getElementById(`play-btn-${index}`).innerText = "▶";
-        }
-        currentlyPlayingIndex = -1;
-    }, 20000);
+    
+    // (Der 10-Sekunden-Timer wurde hier komplett entfernt)
 };
 
-// Sicherheits-Check: Falls das Lied auf natürliche Weise vor 10 Sek. endet
+// Wenn die 30 Sekunden von Apple abgelaufen sind, setzt sich der Button automatisch zurück
 audioPlayer.onended = () => {
     if (currentlyPlayingIndex !== -1) {
         const btn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);

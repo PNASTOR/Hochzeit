@@ -309,3 +309,242 @@ body {
 #btn-add-guest:hover {
     background: rgba(178, 139, 94, 0.1);
 }
+
+/* --- DRESSCODE STYLING --- */
+.dresscode-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px; /* Abstand zwischen Bild und Button */
+}
+
+.dresscode-image {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 70svh; /* Begrenzt die Höhe des Bildes, damit der Button sichtbar bleibt */
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.understood-btn-action {
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 15px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background 0.3s;
+}
+
+.understood-btn-action:hover {
+    background-color: #555;
+}
+
+/* --- DINNER KARTEN STYLING --- */
+#dinner-guests-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 50vh; /* Ermöglicht Scrollen innerhalb der Karte, falls viele Gäste */
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.dinner-guest-block {
+    text-align: left;
+    background: #fdfdfd;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.dinner-guest-name {
+    font-weight: bold;
+    color: #b28b5e;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.dinner-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dinner-input-group input {
+    font-size: 14px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* --- LOCATION KARTE & KARUSSELL --- */
+.carousel-container {
+    width: 100%;
+    height: 66.6svh; /* 2/3 der Bildschirmhöhe */
+    overflow: hidden;
+    position: relative;
+    touch-action: pan-y; /* Erlaubt vertikales Scrollen der Seite, fängt aber horizontales Swipen ab */
+}
+
+.carousel-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.carousel-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.location-info {
+    height: 33.4svh; /* Restliches 1/3 */
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.maps-row {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 10px;
+}
+
+.map-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+    font-size: 14px;
+}
+
+.map-btn.google { background-color: #4285F4; }
+.map-btn.apple { background-color: #000000; }
+
+/* --- VOLLBILD OVERLAY (LIGHTBOX) --- */
+#fullscreen-overlay {
+    position: fixed; /* Legt sich über die gesamte Seite */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9); /* Dunkler, leicht transparenter Hintergrund */
+    z-index: 9999; /* Stellt sicher, dass es über allem anderen liegt */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Verhindert, dass das Flexbox-Layout im Overlay zerschossen wird, wenn display:none greift */
+#fullscreen-overlay.hidden {
+    display: none !important;
+}
+
+#fullscreen-img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    user-select: none;
+}
+
+#close-fullscreen {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 45px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10000;
+    transition: color 0.3s;
+}
+
+#close-fullscreen:hover {
+    color: #b28b5e; /* Ändert sich zur Hochzeitsfarbe beim Hovern */
+}
+
+/* Zeigt dem User, dass er die Karussell-Bilder anklicken kann */
+.carousel-img {
+    cursor: pointer; 
+}
+/* --- PARTY TIME / SONG SUCHE --- */
+#song-search-input {
+    margin: 0;
+    border-radius: 25px;
+    padding: 12px 20px;
+    border: 2px solid #eee;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 250px;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.search-item:hover { background-color: #f9f9f9; }
+.search-item img { width: 40px; height: 40px; border-radius: 4px; }
+.search-item .info { display: flex; flex-direction: column; overflow: hidden; }
+.search-item .title { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-item .artist { font-size: 12px; color: #666; }
+
+.selected-song-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8f8f8;
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #eee;
+}
+
+.play-btn {
+    background: #b28b5e;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}

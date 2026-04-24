@@ -81,30 +81,75 @@
     </div>
 </section>
 
-    <section class="snap-card">
+    <section class="snap-card" id="card-3">
         <h2>Dresscode</h2>
+        <div class="card-content dresscode-content">
+            <img src="Dresscode_V1.png" alt="Dresscode Details" class="dresscode-image">
+            
+            <button id="understood-btn" class="understood-btn-action">Verstanden</button>
+        </div>
     </section>
 
-    <section class="snap-card">
+    <section class="snap-card" id="card-4">
         <h2>Dinner</h2>
-    </section>
+        <div class="card-content">
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+                Gibt es beim Essen etwas zu beachten? (z.B. Allergien, Vegan, etc.)
+            </p>
+            
+            <div id="dinner-guests-container"></div>
 
-    <section class="snap-card">
-        <h2>Location</h2>
+            <button id="save-dinner-btn" class="understood-btn-action" style="margin-top: 20px;">
+                Speichern & Weiter
+            </button>
+        </div>
     </section>
+    
+    <section class="snap-card" id="card-5">
+    <div class="carousel-container" id="carousel-area">
+        <div class="carousel-wrapper" id="carousel-wrapper">
+            <img src="Flonheim/Foto1.jpg" class="carousel-img">
+            <img src="Flonheim/Foto2.jpg" class="carousel-img">
+            <img src="Flonheim/Foto3.jpg" class="carousel-img">
+            <img src="Flonheim/Foto4.jpg" class="carousel-img">
+            <img src="Flonheim/Foto5.png" class="carousel-img">
+        </div>
+    </div>
+    
+    <div class="location-info">
+        <h2>Festhalle Flonheim</h2>
+        <p>Langgasse 79, 55237 Flonheim</p>
+        <div class="maps-row">
+            <a href="https://www.google.com/maps/search/?api=1&query=Festhalle Flonheim" target="_blank" class="map-btn google">Google Maps</a>
+            <a href="https://maps.apple.com/?q=Festhalle Flonheim" target="_blank" class="map-btn apple">Apple Maps</a>
+        </div>
+        <p style="font-size: 0.8em; color: #999; margin-top: 15px;">Wische nach oben für die Party-Infos ↓</p>
+    </div>
+</section>
 
-    <section class="snap-card">
-        <h2>It's Party Time</h2>
-    </section>
+   <section class="snap-card" id="card-6">
+    <h2>It's Party Time</h2>
+    <div class="card-content">
+        <p id="song-count-hint" style="font-size: 0.9em; color: #666; margin-bottom: 15px;"></p>
+        
+        <div id="song-search-container" class="hidden">
+            <div style="position: relative; width: 100%;">
+                <input type="text" id="song-search-input" placeholder="Lied oder Künstler suchen...">
+                <div id="search-results-dropdown" class="search-dropdown hidden"></div>
+            </div>
+        </div>
 
-    <section class="snap-card">
-        <h2>Fotodump</h2>
-    </section>
+        <div id="selected-songs-list" style="margin-top: 20px; width: 100%;"></div>
 
-    <section class="snap-card">
-        <h2>Werbung</h2>
-    </section>
+        <p style="font-size: 0.8em; color: #999; margin-top: 20px;">Wische nach oben für die nächsten Schritte ↓</p>
+    </div>
+</section>
 
+</div>
+
+<div id="fullscreen-overlay" class="hidden">
+    <span id="close-fullscreen">&times;</span>
+    <img id="fullscreen-img" src="" alt="Vollbild Ansicht">
 </div>
 
 <div class="container hidden" id="success-section">
@@ -131,6 +176,7 @@
 
     let currentCode = "";
     let currentStatus = "pending"; //Gaststatus: pending, attending, declined
+    let currentDinnerPrefs = []; //Speichert die Dinner-Daten lokal ab
 
     function scrollToCard(cardId) { // Zu Karte scrollen
     document.getElementById(cardId).scrollIntoView({ behavior: 'smooth' });
@@ -180,7 +226,11 @@
 
         // Namen in Begrüßung einfügen
         document.getElementById('display-name').innerText = data.name ? data.name : "";
-        
+        currentDinnerPrefs = data.dinnerPreferences || [];
+        maxSongs = 1 + (data.guests ? data.guests.length : 0);
+        selectedSongs = data.songWishlist || [];
+        renderSongs();
+        document.getElementById('song-count-hint').innerText = `Deine Gruppe darf sich ${maxSongs} Lied(er) wünschen!`;
         
         // --- NEUE LOGIK FÜR KARTE 2 (Gäste-Reihen) ---
         
@@ -223,6 +273,7 @@
         
         // Aktualisieren, ob der Plus-Button noch angezeigt werden darf
         updateAddButtonVisibility();
+        startAutoplay();
 
     } else {
         document.getElementById('login-error').innerText = "Code ungültig. Bitte versuche es erneut.";
@@ -431,17 +482,333 @@ function updateButtonUI(status) {
     }
 }
 
-// --- FORMULAR ABSENDEN ---
-document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// --- BUTTON LOGIK DRESSCODE ---
+document.getElementById('understood-btn').addEventListener('click', () => {
+    loadDinnerCard(); // Namen laden, bevor gescrollt wird
+    scrollToCard('card-4');
+});
+
+// --- LOGIK FÜR KARTE 4 (DINNER) ---
+
+function loadDinnerCard() {
+    const container = document.getElementById('dinner-guests-container');
+    container.innerHTML = ""; // Vorher leeren
+
+    const guestRows = document.querySelectorAll('#guest-rows-container .guest-row.saved');
     
+    if (guestRows.length === 0) {
+        container.innerHTML = "<p style='color:#dc3545;'>Bitte trage zuerst deine Gäste unter 'Gäste Infos' (Karte 2) ein und speichere sie ab.</p>";
+        return;
+    }
+
+    guestRows.forEach((row) => {
+        const firstName = row.querySelector('.input-first').value;
+        const lastName = row.querySelector('.input-last').value;
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        // NEU: Schauen, ob für diesen Namen schon Daten existieren
+        const existingData = currentDinnerPrefs.find(d => d.name === fullName) || { allergies: "", notes: "" };
+
+        const guestBlock = document.createElement('div');
+        guestBlock.className = "dinner-guest-block";
+        guestBlock.innerHTML = `
+            <span class="dinner-guest-name">${fullName}</span>
+            <div class="dinner-input-group">
+                <input type="text" class="dinner-allergies" placeholder="Allergien / Diät (z.B. Vegan)" value="${existingData.allergies}">
+                <input type="text" class="dinner-notes" placeholder="Anmerkung zum Essen" value="${existingData.notes}">
+            </div>
+        `;
+        container.appendChild(guestBlock);
+    });
+}
+
+// 1. Laden beim Klick auf "Verstanden" (Karte 3)
+document.getElementById('understood-btn').addEventListener('click', () => {
+    loadDinnerCard(); 
+    scrollToCard('card-4');
+});
+
+// 2. Sicherheits-Check: Laden, wenn der Gast per Hand zu Karte 4 wischt
+const dinnerCardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        // Wenn Karte 4 zu mindestens 50% sichtbar wird
+        if (entry.isIntersecting) {
+            // Nur laden, wenn der Container noch leer ist (verhindert Überschreiben bereits getippter Eingaben)
+            if (document.getElementById('dinner-guests-container').innerHTML.trim() === "") {
+                loadDinnerCard();
+            }
+        }
+    });
+}, { threshold: 0.5 });
+dinnerCardObserver.observe(document.getElementById('card-4'));
+
+// Speichern-Button auf Karte 4
+document.getElementById('save-dinner-btn').addEventListener('click', async () => {
+    const blocks = document.querySelectorAll('.dinner-guest-block');
+    const dinnerData = [];
+
+    blocks.forEach(block => {
+        dinnerData.push({
+            name: block.querySelector('.dinner-guest-name').innerText,
+            allergies: block.querySelector('.dinner-allergies').value.trim(),
+            notes: block.querySelector('.dinner-notes').value.trim()
+        });
+    });
+
+    // NEU: Globale Variable updaten, damit beim Wischen nichts verloren geht
+    currentDinnerPrefs = dinnerData;
+
     await updateDoc(doc(db, "invitations", currentCode), {
-        name: document.getElementById('guest-name').value,
-        plusOnes: document.getElementById('plus-ones').value,
-        allergies: document.getElementById('allergies').value,
+        dinnerPreferences: dinnerData,
         lastUpdated: new Date()
     });
 
+    // Button-Feedback, damit der Gast sieht, dass gespeichert wurde
+    const btn = document.getElementById('save-dinner-btn');
+    const originalText = btn.innerText;
+    btn.innerText = "Gespeichert!";
+    btn.style.backgroundColor = "#28a745"; // Kurz grün aufleuchten
+    
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.backgroundColor = "#333";
+        scrollToCard('card-5'); // Dann erst scrollen
+    }, 800);
+});
+
+// --- KARUSSELL LOGIK ---
+let currentSlide = 0;
+let carouselTimer;
+let interactionTimer;
+
+function updateCarousel() {
+    const wrapper = document.getElementById('carousel-wrapper');
+    const totalSlides = document.querySelectorAll('.carousel-img').length;
+    currentSlide = (currentSlide + 1) % totalSlides;
+    wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+}
+
+function startAutoplay() {
+    stopAutoplay(); // Sicherstellen, dass kein Timer doppelt läuft
+    carouselTimer = setInterval(updateCarousel, 3000);
+}
+
+function stopAutoplay() {
+    clearInterval(carouselTimer);
+}
+
+// Funktion für die 5-Sekunden-Pause
+function handleManualInteraction() {
+    stopAutoplay();
+    clearTimeout(interactionTimer);
+    interactionTimer = setTimeout(() => {
+        startAutoplay();
+    }, 5000);
+}
+
+// Swipe-Erkennung
+let touchStartX = 0;
+const carouselArea = document.getElementById('carousel-area');
+
+carouselArea.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    handleManualInteraction(); // Timer pausieren
+}, {passive: true});
+
+carouselArea.addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const wrapper = document.getElementById('carousel-wrapper');
+    const totalSlides = document.querySelectorAll('.carousel-img').length;
+
+    if (touchStartX - touchEndX > 50) {
+        // Swipe links -> Nächstes Bild
+        currentSlide = (currentSlide + 1) % totalSlides;
+    } else if (touchEndX - touchStartX > 50) {
+        // Swipe rechts -> Vorheriges Bild
+        currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+    }
+    wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+}, {passive: true});
+
+// --- VOLLBILD LOGIK (LIGHTBOX) ---
+const overlay = document.getElementById('fullscreen-overlay');
+const fullscreenImg = document.getElementById('fullscreen-img');
+const closeBtn = document.getElementById('close-fullscreen');
+const carouselImages = document.querySelectorAll('.carousel-img');
+
+// Bild öffnen
+carouselImages.forEach(img => {
+    img.addEventListener('click', (e) => {
+        fullscreenImg.src = e.target.src; // Kopiert die Bild-URL
+        overlay.classList.remove('hidden'); // Blendet Overlay ein
+        stopAutoplay(); // Stoppt das Karussell im Hintergrund
+    });
+});
+
+// Bild schließen durch X-Button
+closeBtn.addEventListener('click', () => {
+    overlay.classList.add('hidden');
+    handleManualInteraction(); // Startet den 5-Sekunden-Timer für das Karussell
+});
+
+// Bild schließen durch Klick in den leeren Raum
+overlay.addEventListener('click', (e) => {
+    // Prüft, ob man auf den Hintergrund (overlay) geklickt hat und nicht auf das Bild selbst
+    if (e.target === overlay) {
+        overlay.classList.add('hidden');
+        handleManualInteraction(); 
+    }
+});
+
+// --- LOGIK FÜR KARTE 6 (PARTY TIME) ---
+
+let maxSongs = 1;
+let selectedSongs = [];
+let audioPlayer = new Audio();
+
+// Funktion zum Suchen von Songs (iTunes API)
+async function searchSongs(query) {
+    if (query.length < 3) return;
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5&country=de`);
+    const data = await response.json();
+    displaySearchResults(data.results);
+}
+
+function displaySearchResults(results) {
+    const dropdown = document.getElementById('search-results-dropdown');
+    dropdown.innerHTML = "";
+    if (results.length === 0) { dropdown.classList.add('hidden'); return; }
+
+    results.forEach(song => {
+        const item = document.createElement('div');
+        item.className = "search-item";
+        item.innerHTML = `
+            <img src="${song.artworkUrl60}" alt="Cover">
+            <div class="info">
+                <span class="title">${song.trackName}</span>
+                <span class="artist">${song.artistName}</span>
+            </div>
+        `;
+        item.onclick = () => addSong(song);
+        dropdown.appendChild(item);
+    });
+    dropdown.classList.remove('hidden');
+}
+
+async function addSong(song) {
+    if (selectedSongs.length >= maxSongs) return;
+
+    const newSong = {
+        id: song.trackId,
+        title: song.trackName,
+        artist: song.artistName,
+        previewUrl: song.previewUrl,
+        cover: song.artworkUrl60
+    };
+
+    selectedSongs.push(newSong);
+    document.getElementById('search-results-dropdown').classList.add('hidden');
+    document.getElementById('song-search-input').value = "";
+    
+    renderSongs();
+    await syncSongsToFirebase();
+}
+
+async function removeSong(index) {
+    selectedSongs.splice(index, 1);
+    renderSongs();
+    await syncSongsToFirebase();
+}
+
+function renderSongs() {
+    const list = document.getElementById('selected-songs-list');
+    list.innerHTML = "";
+
+    selectedSongs.forEach((song, index) => {
+        const row = document.createElement('div');
+        row.className = "selected-song-row";
+        row.innerHTML = `
+            <button id="play-btn-${index}" class="play-btn" onclick="window.togglePlay(${index}, '${song.previewUrl}')">▶</button>
+            <div class="info" style="flex:1; text-align:left;">
+                <div style="font-weight:bold; font-size:14px;">${song.title}</div>
+                <div style="font-size:12px; color:#666;">${song.artist}</div>
+            </div>
+            <button class="icon-btn" onclick="window.removeSong(${index})">${iconTrash}</button>
+        `;
+        list.appendChild(row);
+    });
+
+    // Plus-Icon (Suche) anzeigen/verstecken
+    const searchContainer = document.getElementById('song-search-container');
+    if (selectedSongs.length < maxSongs) {
+        searchContainer.classList.remove('hidden');
+    } else {
+        searchContainer.classList.add('hidden');
+    }
+}
+
+/// --- NEUE AUDIO LOGIK (Play / Pause) ---
+let currentlyPlayingIndex = -1; // Merkt sich, welches Lied gerade läuft
+let previewTimeout; // Merkt sich den 10-Sekunden-Timer
+
+window.togglePlay = (index, url) => {
+    const btn = document.getElementById(`play-btn-${index}`);
+
+    // Fall 1: Das ausgewählte Lied läuft bereits -> PAUSIEREN
+    if (currentlyPlayingIndex === index && !audioPlayer.paused) {
+        audioPlayer.pause();
+        btn.innerText = "▶"; // Zurück zu Play
+        clearTimeout(previewTimeout); // Timer stoppen
+        currentlyPlayingIndex = -1;
+        return;
+    }
+
+    // Fall 2: Ein anderes Lied läuft gerade -> ALTES STOPPEN
+    if (currentlyPlayingIndex !== -1) {
+        const oldBtn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);
+        if (oldBtn) oldBtn.innerText = "▶"; // Altes Symbol zurücksetzen
+        clearTimeout(previewTimeout);
+    }
+
+    // Fall 3: Lied starten
+    audioPlayer.src = url;
+    audioPlayer.play();
+    btn.innerText = "⏸"; // Auf Pause-Symbol wechseln
+    currentlyPlayingIndex = index;
+
+    // Nach 10 Sekunden automatisch stoppen
+    previewTimeout = setTimeout(() => {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        if (document.getElementById(`play-btn-${index}`)) {
+            document.getElementById(`play-btn-${index}`).innerText = "▶";
+        }
+        currentlyPlayingIndex = -1;
+    }, 20000);
+};
+
+// Sicherheits-Check: Falls das Lied auf natürliche Weise vor 10 Sek. endet
+audioPlayer.onended = () => {
+    if (currentlyPlayingIndex !== -1) {
+        const btn = document.getElementById(`play-btn-${currentlyPlayingIndex}`);
+        if (btn) btn.innerText = "▶";
+        currentlyPlayingIndex = -1;
+    }
+};
+
+window.removeSong = (index) => removeSong(index);
+
+async function syncSongsToFirebase() {
+    await updateDoc(doc(db, "invitations", currentCode), {
+        songWishlist: selectedSongs
+    });
+}
+
+// Suche beim Tippen (Debounce)
+let searchTimeout;
+document.getElementById('song-search-input').addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => searchSongs(e.target.value), 100);
 });
     </script>
 

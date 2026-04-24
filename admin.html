@@ -46,8 +46,10 @@
                 <th>Code</th>
                 <th>Hauptgast</th>
                 <th>Status (Hochzeit)</th>
-                <th>Standesamt</th> <th>Begleitungen</th>
-                <th>Notiz</th>        <th>Aktionen</th>
+                <th>Standesamt</th>
+                <th>Begleitungen</th>
+                <th>Dinner Wünsche</th> <th>Notiz</th>
+                <th>Aktionen</th>
             </tr>
         </thead>
         <tbody id="guest-list">
@@ -130,6 +132,7 @@
     // Live-Update der Tabelle
     const q = collection(db, "invitations");
     // --- TABELLEN UPDATE (onSnapshot) ---
+// --- TABELLEN UPDATE (onSnapshot) ---
 onSnapshot(collection(db, "invitations"), (snapshot) => {
     const tbody = document.getElementById('guest-list');
     tbody.innerHTML = "";
@@ -144,26 +147,63 @@ onSnapshot(collection(db, "invitations"), (snapshot) => {
         const hasStandesamt = data.hasStandesamt || false;
         const sCode = data.standesamtCode || "-";
         let sStatus = data.standesamtStatus || "pending";
-        
-        // Status für Standesamt etwas schöner formatieren
         if(sStatus === "attending") sStatus = "✅ Zugesagt";
         else if(sStatus === "declined") sStatus = "❌ Abgesagt";
         else sStatus = "⏳ Ausstehend";
 
-        // HTML für die Standesamt-Spalte zusammenbauen
         let standesamtHtml = "-";
-        if (hasStandesamt) {
-            standesamtHtml = `<b>${sCode}</b><br><span style="font-size:0.8em; color:#666;">${sStatus}</span>`;
+        if (hasStandesamt) standesamtHtml = `<b>${sCode}</b><br><span style="font-size:0.8em; color:#666;">${sStatus}</span>`;
+
+        // Dinner Daten auslesen und formatieren
+        const dinnerPrefs = data.dinnerPreferences || [];
+        let dinnerHtml = "Keine Eingabe";
+        
+        if (dinnerPrefs.length > 0) {
+            const hasAnyInfo = dinnerPrefs.some(d => d.allergies !== "" || d.notes !== "");
+            if (hasAnyInfo) {
+                let listItems = dinnerPrefs.map(d => {
+                    let info = [];
+                    if (d.allergies) info.push(`<b>Allergien:</b> ${d.allergies}`);
+                    if (d.notes) info.push(`<b>Info:</b> ${d.notes}`);
+                    
+                    if (info.length === 0) return ""; 
+                    return `<li style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>${d.name}</b><br>${info.join('<br>')}</li>`;
+                }).join('');
+
+                dinnerHtml = `
+                    <details>
+                        <summary style="cursor: pointer; color: #b28b5e; font-weight: bold;">Anzeigen</summary>
+                        <ul style="text-align:left; font-size: 0.85em; list-style-type: none; padding-left: 0; margin-top: 5px;">
+                            ${listItems}
+                        </ul>
+                    </details>
+                `;
+            } else {
+                dinnerHtml = "<span style='color: #28a745;'>Keine Besonderheiten</span>";
+            }
         }
+
+        // --- NEU: MUSIKWÜNSCHE AUSLESEN ---
+        const songs = data.songWishlist || [];
+        let songsHtml = "-";
+        if (songs.length > 0) {
+            songsHtml = `
+                <details>
+                    <summary style="cursor: pointer; color: #b28b5e; font-weight: bold;">${songs.length} Lied(er)</summary>
+                    <ul style="text-align:left; font-size: 0.85em; padding-left: 15px; margin-top: 5px;">
+                        ${songs.map(s => `<li><b>${s.title}</b><br><span style="color:#666;">${s.artist}</span></li>`).join('')}
+                    </ul>
+                </details>
+            `;
+        }
+        // ----------------------------------
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><b>${docSnap.id}</b></td>
             <td>${data.name}</td>
             <td>${data.status === "attending" ? "✅" : (data.status === "declined" ? "❌" : "⏳")} ${data.status}</td>
-            
             <td>${standesamtHtml}</td>
-            
             <td>
                 ${hasGuests ? `
                     <details>
@@ -174,6 +214,11 @@ onSnapshot(collection(db, "invitations"), (snapshot) => {
                     </details>
                 ` : "Keine"}
             </td>
+            
+            <td style="min-width: 120px;">${dinnerHtml}</td>
+            
+            <td style="min-width: 120px;">${songsHtml}</td>
+            
             <td style="max-width: 150px; font-size: 0.85em; color: #555; cursor: pointer;" onclick="window.editNote('${docSnap.id}')">
                 ${note ? note : "<i>Klicken zum Hinzufügen</i>"}
             </td>

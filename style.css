@@ -305,6 +305,7 @@ body {
     align-items: center;
     margin-bottom: 20px; /* ERHÖHTER ABSTAND zwischen den Zeilen */
     width: 100%;
+    padding: 8px 5px;
     background: #fdfdfd;
     border-radius: 8px;
     border: 1px solid #eee;

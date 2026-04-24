@@ -83,7 +83,7 @@ body {
             margin: 0 auto 2vh auto;
             display: block;
             border-radius: 10px;
-        }
+            background-color:#fdfdfd;        }
 
         h2 { margin: 1vh 0; font-size: 1.6em; }
         p { margin: 1vh 0; }
@@ -301,10 +301,11 @@ body {
 /* --- DYNAMISCHE GÄSTE-REIHEN --- */
 .guest-row {
     display: flex;
-    gap: 5px; /* Abstand etwas verringert für mehr Platz */
+    gap: 10px;
     align-items: center;
+    margin-bottom: 20px; /* ERHÖHTER ABSTAND zwischen den Zeilen */
+    width: 100%;
     background: #fdfdfd;
-    padding: 8px 5px; /* Etwas kompakter */
     border-radius: 8px;
     border: 1px solid #eee;
 }

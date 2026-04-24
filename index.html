@@ -372,6 +372,9 @@ function createGuestRow(firstName = "", lastName = "", isSaved = false) {
             btn2.innerHTML = iconPencil;
             btn2.disabled = true; // Stift inaktiv
             row.classList.remove('saved');
+            syncGuestsToFirebase();
+            loadDinnerCard();
+            updateMaxSongs(); 
         } else if (state === "saved") {
             inputFirst.disabled = true;
             inputLast.disabled = true;
@@ -381,6 +384,7 @@ function createGuestRow(firstName = "", lastName = "", isSaved = false) {
             row.classList.add('saved');
             syncGuestsToFirebase(); 
             loadDinnerCard(); 
+            updateMaxSongs(); 
         } else if (state === "editing") {
             inputFirst.disabled = false;
             inputLast.disabled = false;
@@ -389,6 +393,7 @@ function createGuestRow(firstName = "", lastName = "", isSaved = false) {
             row.classList.remove('saved'); 
             syncGuestsToFirebase();
             loadDinnerCard();
+            updateMaxSongs(); 
         }
     }
 
@@ -847,6 +852,31 @@ const cardAnimationObserver = new IntersectionObserver((entries) => {
 document.querySelectorAll('.snap-card').forEach(card => {
     cardAnimationObserver.observe(card);
 });
+    // --- NEU: Dynamische Song-Limits basierend auf Gästeanzahl ---
+function updateMaxSongs() {
+    // 1. Zähle alle aktuell gespeicherten Gäste (Hauptgast + Begleitungen)
+    const savedGuestsCount = document.querySelectorAll('#guest-rows-container .guest-row.saved').length;
+    
+    // Mindestens 1 Lied erlauben, ansonsten genau 1 Lied pro gespeichertem Gast
+    maxSongs = savedGuestsCount > 0 ? savedGuestsCount : 1; 
+
+    // 2. Den Hinweistext aktualisieren
+    const hintElement = document.getElementById('song-count-hint');
+    if (hintElement) {
+        hintElement.innerText = `Deine Gruppe darf sich ${maxSongs} Lied(er) wünschen!`;
+    }
+
+    // 3. Sicherheits-Check: Wurde ein Gast gelöscht und es sind jetzt zu viele Lieder da?
+    if (selectedSongs.length > maxSongs) {
+        // Schneidet die überflüssigen Lieder am Ende der Liste ab
+        selectedSongs = selectedSongs.slice(0, maxSongs); 
+        syncSongsToFirebase(); // Direkt in die Datenbank synchronisieren
+    }
+
+    // 4. UI aktualisieren (versteckt z.B. die Suchleiste, wenn das Limit erreicht ist)
+    renderSongs();
+}
+
     </script>
 
 </body>
